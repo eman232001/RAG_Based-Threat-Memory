@@ -1,16 +1,16 @@
 \begin{table*}[t]
 \centering
-\caption{Table VIII: Pre-Specified Hypotheses and Observed Empirical Verdicts}
-\begin{tabular}{l l l c}
+\caption{Table VIII: Consolidated Evaluation Outcomes Across Hypotheses Specified in the Frozen Analysis Plan}
+\begin{tabular}{l p{5.2cm} p{7.3cm} c}
 \hline
-\textbf{Hypothesis} & \textbf{Pre-registered Formal Criterion} & \textbf{Empirical Observation} & \textbf{Verdict} \\
+\textbf{Hypothesis} & \textbf{Frozen Analysis Plan Formal Criterion} & \textbf{Audited Empirical Evidence} & \textbf{Verdict} \\
 \hline
-H1 (RQ1) & B3 $\text{ASR} < \text{B1}$ at equal or lower FPR & $\text{ASR}: 8.3\% < 25.0\%$, $\text{FPR}: 0.0\% \le 10.0\%$ & \textbf{Supported} \\
-H2 (RQ2) & $AG > 0$ (95\% CI above 0), $\Delta\text{FPR} \le 1.0\text{ pp}$ & Mean $AG = +88.9\%$ [95\% CI $>0$], $\Delta\text{FPR} = +0.00\%$ & \textbf{Supported} \\
-H3 (RQ3) & B3 attains lower ASR than B1, B2 under fuzzing & B3 ASR strictly lower across budgets 50--500 & \textbf{Supported} \\
-H4 (RQ4) & $\text{EVR} \ge 90\%$, $\kappa \ge 0.60$, 0 privacy leaks & $\text{EVR} = 94.0\%$, $\kappa = 1.000$, 0 leaks detected & \textbf{Supported} \\
-H5 (RQ5) & TSR within 5.0 pp B0; non-inferior to B5 (margin $\Delta = 5.0\text{ pp}$); lower latency & TSR $\Delta = 0.0\text{ pp}$; ASR non-inferior ($-4.2\text{ pp} < +5.0\text{ pp}$, $p = 0.016$); latency: $5.0\,\text{ms} \ll 1102.9\,\text{ms}$ & \textbf{Supported} \\
-H6 (RQ6) & $\text{MPS} = 0\%$ (candidates); $\le 5\%$ (verified-crafted) & $\text{MPS}_{\text{cand}} = 0.0\%$, $\text{MPS}_{\text{craft}} = 0.0\%$ & \textbf{Supported} \\
+H1 (Zero-Day Containment) & $B_3$ ASR $\le B_1$ ASR under paired McNemar testing ($p < 0.05$ on $n=1,673$). Note: Decision rules differ ($B_1$ raw detector threshold vs. $B_3$ calibrated fused score); comparison does not isolate memory alone. & $B_1$ ASR = 5.74\% vs. $B_3$ ASR = 6.28\%; discordant $b=0, c=9$; exact McNemar $p = 0.0039$ (favors $B_1$; difference driven by calibration/decision rules) & \textbf{Not Supported} \\
+H2 (Threat Adaptation Gain) & $AG > 0$ (95\% CI $> 0$); $\Delta\text{FPR} \le 1.0\text{ pp}$ upon exemplar update & Mean $AG = +88.9\%$ [95\% bootstrap CI: $+72.2\%, +100.0\%$]; $\Delta\text{FPR} = +0.00\%$ on 18 held-out evasions. Shows certain evasions remediable; sample is small and does not prove universal remediability. & \textbf{Supported (Proof-of-Concept)} \\
+H3 (Fuzzing Robustness) & $B_3$ attains strictly lower ASR across mutation budgets 50--500 & $B_3$ ASR ($10\% \to 40\%$) strictly lower than $B_1$ ($30\% \to 70\%$), $B_2$ ($40\% \to 90\%$), and $B_6$ ($30\% \to 70\%$) & \textbf{Supported} (Descriptive Trend) \\
+H4 (Explanation Fidelity) & $\text{EVR} \ge 90\%$; Cohen's $\kappa \ge 0.60$; 0 privacy leaks & $\text{EVR} = 94.0\%$ (47/50); Cohen's $\kappa = 1.000$; zero protected context recovered. Conditioned on 50-item convenience sample and reviewer constraints. & \textbf{Supported (Sample-Conditioned)} \\
+H5 (Utility and Efficiency) & Non-inferior to $B_5$ ($\Delta = 5.0\text{ pp}$); local latency lower than $B_5$; TSR within 5 pp of $B_0$ & TSR $\Delta = 0.0\text{ pp}$; $B_3$ ASR non-inferior to $B_5$ ($\Delta = -6.2\text{ pp} < +5.0\text{ pp}, p < 0.001$); local overhead $22.0\text{ ms} \ll 1102.9\text{ ms}$ & \textbf{Partially Supported} \\
+H6 (Poisoning Resistance) & $\text{MPS}_{\text{cand}} = 0\%$; $\text{MPS}_{\text{craft}} \le 5\%$ during ingestion validation & $\text{MPS}_{\text{cand}} = 0.0\%$ (0/100); $\text{MPS}_{\text{craft}} = 0.0\%$ (0/100) across 200 evaluated trials & \textbf{Supported} (Ingestion Filter) \\
 \hline
 \end{tabular}
 \end{table*}
