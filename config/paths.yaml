@@ -1,0 +1,49 @@
+# =============================================================================
+# paths.yaml — All file paths in one place
+# All paths are relative to the project root (rtm_project/)
+# =============================================================================
+
+data:
+  raw_dir: "data/raw"
+  raw_injecagent: "data/raw/injecagent"
+  raw_bipia: "data/raw/bipia"
+  raw_open_prompt_injection: "data/raw/open_prompt_injection"
+  memory: "data/memory.jsonl"
+  candidate_queue: "data/candidate_queue.jsonl"
+  verification_log: "data/verification_log.csv"
+  calibration_models: "data/calibration_models.pkl"
+  faiss_index: "data/faiss_index.bin"
+  faiss_metadata: "data/faiss_metadata.jsonl"
+  bm25_index: "data/bm25_index.pkl"
+  partitions_dir: "data/partitions"
+  calibration_partition: "data/partitions/calibration.jsonl"
+  benign_test_partition: "data/partitions/benign_test.jsonl"
+  held_out_families_dir: "data/partitions/held_out_families"
+  adaptive_seeds: "data/partitions/adaptive_seeds.jsonl"
+  poisoning_attempts: "data/partitions/poisoning_attempts.jsonl"
+  data_inventory: "logs/data_inventory.csv"
+
+logs:
+  cases: "logs/cases.csv"
+  run_log: "logs/run.log"
+  data_inventory: "logs/data_inventory.csv"
+
+outputs:
+  tables_dir: "outputs/tables"
+  figures_dir: "outputs/figures"
+  table_II: "outputs/tables/table_II.tex"
+  table_III: "outputs/tables/table_III.tex"
+  table_IV: "outputs/tables/table_IV.tex"
+  table_V: "outputs/tables/table_V.tex"
+  table_VI: "outputs/tables/table_VI.tex"
+  table_VII: "outputs/tables/table_VII.tex"
+  table_VIII: "outputs/tables/table_VIII.tex"
+  fig3: "outputs/figures/fig3_asr_vs_budget.pdf"
+
+config:
+  models: "config/models.yaml"
+  experiment: "config/experiment.yaml"
+  paths: "config/paths.yaml"
+  secrets: "config/secrets.yaml"
+  detector_prompt: "config/detector_prompt.txt"
+  prereg: "prereg.yaml"

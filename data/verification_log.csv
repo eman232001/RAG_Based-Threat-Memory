@@ -1,0 +1,156 @@
+record_id,family,source,discovery_date,activation_date,ttp_minutes,verified_by
+RTM-001,goal_hijacking,OWASP LLM01:2025,2025-01-01,2025-01-03,1440,RTM Research Team
+RTM-002,goal_hijacking,OWASP LLM01:2025,2025-01-05,2025-01-07,2880,RTM Research Team
+RTM-003,goal_hijacking,InjecAgent (Zhan et al. 2024),2024-03-15,2024-03-17,720,RTM Research Team
+RTM-004,goal_hijacking,BIPIA (Yi et al. 2023),2023-11-01,2023-11-05,4320,RTM Research Team
+RTM-005,goal_hijacking,AgentVigil (Xu et al. 2024),2024-06-01,2024-06-03,1440,RTM Research Team
+RTM-006,goal_hijacking,OWASP LLM01:2025,2025-02-01,2025-02-02,480,RTM Research Team
+RTM-007,goal_hijacking,OWASP LLM01:2025,2025-01-15,2025-01-17,1440,RTM Research Team
+RTM-008,goal_hijacking,InjecAgent (Zhan et al. 2024),2024-04-01,2024-04-03,720,RTM Research Team
+RTM-009,goal_hijacking,BIPIA (Yi et al. 2023),2023-12-01,2023-12-03,2880,RTM Research Team
+RTM-010,goal_hijacking,DataSentinel (2024),2024-07-01,2024-07-03,1440,RTM Research Team
+RTM-011,indirect_prompt_injection,BIPIA (Yi et al. 2023),2023-11-01,2023-11-05,1440,RTM Research Team
+RTM-012,indirect_prompt_injection,InjecAgent (Zhan et al. 2024),2024-03-01,2024-03-03,720,RTM Research Team
+RTM-013,indirect_prompt_injection,BIPIA (Yi et al. 2023),2023-12-01,2023-12-03,2880,RTM Research Team
+RTM-014,indirect_prompt_injection,InjecAgent (Zhan et al. 2024),2024-04-01,2024-04-02,480,RTM Research Team
+RTM-015,indirect_prompt_injection,AgentVigil (Xu et al. 2024),2024-05-01,2024-05-03,1440,RTM Research Team
+RTM-016,indirect_prompt_injection,OWASP LLM01:2025,2025-01-20,2025-01-22,1440,RTM Research Team
+RTM-017,indirect_prompt_injection,DataSentinel (2024),2024-08-01,2024-08-03,720,RTM Research Team
+RTM-018,indirect_prompt_injection,InjecAgent (Zhan et al. 2024),2024-03-20,2024-03-22,1440,RTM Research Team
+RTM-019,indirect_prompt_injection,OWASP LLM01:2025,2025-02-10,2025-02-12,2880,RTM Research Team
+RTM-020,indirect_prompt_injection,BIPIA (Yi et al. 2023),2023-11-15,2023-11-17,1440,RTM Research Team
+RTM-021,exfiltration,InjecAgent (Zhan et al. 2024),2024-03-01,2024-03-03,720,RTM Research Team
+RTM-022,exfiltration,BIPIA (Yi et al. 2023),2023-11-01,2023-11-05,1440,RTM Research Team
+RTM-023,exfiltration,DataSentinel (2024),2024-09-01,2024-09-03,720,RTM Research Team
+RTM-024,exfiltration,OWASP LLM01:2025,2025-01-01,2025-01-03,480,RTM Research Team
+RTM-025,exfiltration,AgentVigil (Xu et al. 2024),2024-06-01,2024-06-03,1440,RTM Research Team
+RTM-026,exfiltration,DataSentinel (2024),2024-10-01,2024-10-03,2880,RTM Research Team
+RTM-027,exfiltration,OWASP LLM01:2025,2025-02-15,2025-02-17,4320,RTM Research Team
+RTM-028,exfiltration,Research (2024),2024-11-01,2024-11-05,10080,RTM Research Team
+RTM-029,code_injection,InjecAgent (Zhan et al. 2024),2024-03-15,2024-03-17,720,RTM Research Team
+RTM-030,code_injection,OWASP LLM01:2025,2025-01-01,2025-01-03,480,RTM Research Team
+RTM-031,code_injection,Research (2024),2024-08-01,2024-08-03,1440,RTM Research Team
+RTM-032,code_injection,OWASP LLM01:2025,2025-01-10,2025-01-12,720,RTM Research Team
+RTM-033,code_injection,Research (2024),2024-09-01,2024-09-03,1440,RTM Research Team
+RTM-034,code_injection,AgentVigil (Xu et al. 2024),2024-06-15,2024-06-17,1440,RTM Research Team
+RTM-035,code_injection,InjecAgent (Zhan et al. 2024),2024-04-01,2024-04-03,720,RTM Research Team
+RTM-036,obfuscation_evasion,MITRE ATLAS T0043,2024-01-01,2024-01-05,1440,RTM Research Team
+RTM-037,obfuscation_evasion,Research (2023),2023-10-01,2023-10-05,2880,RTM Research Team
+RTM-038,obfuscation_evasion,Research (2024),2024-02-01,2024-02-05,4320,RTM Research Team
+RTM-039,obfuscation_evasion,MITRE ATLAS,2024-03-01,2024-03-05,2880,RTM Research Team
+RTM-040,obfuscation_evasion,Research (2023),2023-11-01,2023-11-05,2880,RTM Research Team
+RTM-041,obfuscation_evasion,BIPIA (Yi et al. 2023),2023-12-01,2023-12-05,1440,RTM Research Team
+RTM-042,obfuscation_evasion,Research (2024),2024-05-01,2024-05-05,2880,RTM Research Team
+RTM-043,privilege_escalation,MITRE ATLAS,2024-01-01,2024-01-05,720,RTM Research Team
+RTM-044,privilege_escalation,OWASP LLM01:2025,2025-02-01,2025-02-03,2880,RTM Research Team
+RTM-045,privilege_escalation,OWASP LLM01:2025,2025-01-01,2025-01-03,480,RTM Research Team
+RTM-046,privilege_escalation,Research (2024),2024-07-01,2024-07-05,1440,RTM Research Team
+RTM-047,privilege_escalation,MITRE ATLAS,2024-02-01,2024-02-05,720,RTM Research Team
+RTM-048,denial_of_service,MITRE ATLAS T0029,2024-01-01,2024-01-05,2880,RTM Research Team
+RTM-049,denial_of_service,Research (2024),2024-04-01,2024-04-05,1440,RTM Research Team
+RTM-050,denial_of_service,DataSentinel (2024),2024-09-01,2024-09-05,2880,RTM Research Team
+RTM-051,denial_of_service,Research (2024),2024-06-01,2024-06-05,4320,RTM Research Team
+RTM-052,memory_poisoning,DataSentinel (2024),2024-09-01,2024-09-03,1440,RTM Research Team
+RTM-053,memory_poisoning,Research (2024),2024-10-01,2024-10-05,2880,RTM Research Team
+RTM-054,memory_poisoning,DataSentinel (2024),2024-11-01,2024-11-05,2880,RTM Research Team
+RTM-055,memory_poisoning,MITRE ATLAS,2024-03-01,2024-03-05,720,RTM Research Team
+RTM-056,memory_poisoning,DataSentinel (2024),2024-08-01,2024-08-05,1440,RTM Research Team
+RTM-057,social_engineering,OWASP LLM01:2025,2025-01-01,2025-01-05,1440,RTM Research Team
+RTM-058,social_engineering,OWASP LLM01:2025,2025-02-01,2025-02-05,2880,RTM Research Team
+RTM-059,social_engineering,Research (2024),2024-06-01,2024-06-05,4320,RTM Research Team
+RTM-060,social_engineering,Research (2024),2024-07-01,2024-07-05,4320,RTM Research Team
+RTM-061,jailbreaking,Research (2023),2023-08-01,2023-08-05,1440,RTM Research Team
+RTM-062,jailbreaking,Research (2023),2023-09-01,2023-09-05,2880,RTM Research Team
+RTM-063,jailbreaking,Research (2024),2024-01-01,2024-01-05,1440,RTM Research Team
+RTM-064,jailbreaking,Research (2024),2024-04-01,2024-04-05,4320,RTM Research Team
+RTM-065,jailbreaking,Research (2023),2023-10-01,2023-10-05,2880,RTM Research Team
+RTM-066,network_propagation,Research (2024),2024-05-01,2024-05-05,720,RTM Research Team
+RTM-067,network_propagation,MITRE ATLAS,2024-02-01,2024-02-05,720,RTM Research Team
+RTM-068,network_propagation,MITRE ATLAS T0043,2024-03-01,2024-03-05,480,RTM Research Team
+RTM-069,data_manipulation,InjecAgent (Zhan et al. 2024),2024-03-01,2024-03-05,1440,RTM Research Team
+RTM-070,data_manipulation,MITRE ATLAS,2024-01-01,2024-01-05,720,RTM Research Team
+RTM-071,data_manipulation,Research (2024),2024-07-01,2024-07-05,720,RTM Research Team
+RTM-072,data_manipulation,MITRE ATLAS T0042,2024-02-01,2024-02-05,480,RTM Research Team
+RTM-073,device_enumeration,InjecAgent (Zhan et al. 2024) — device_and_driver_enumeration,2024-03-01,2024-03-05,720,RTM Research Team
+RTM-074,device_enumeration,InjecAgent (Zhan et al. 2024) — device_and_driver_enumeration,2024-04-01,2024-04-05,720,RTM Research Team
+RTM-075,environment_analysis,InjecAgent (Zhan et al. 2024) — environment_variable_analysis,2024-03-15,2024-03-17,480,RTM Research Team
+RTM-076,environment_analysis,InjecAgent (Zhan et al. 2024) — environment_variable_analysis,2024-04-10,2024-04-12,480,RTM Research Team
+RTM-077,ransomware,InjecAgent (Zhan et al. 2024) — encrypting_documents_and_demanding_ransom,2024-05-01,2024-05-05,480,RTM Research Team
+RTM-078,ransomware,InjecAgent (Zhan et al. 2024) — cryptocurrency_mining,2024-03-01,2024-03-05,720,RTM Research Team
+RTM-079,information_manipulation,InjecAgent (Zhan et al. 2024) — information_dissemination,2024-03-01,2024-03-05,1440,RTM Research Team
+RTM-080,information_manipulation,InjecAgent (Zhan et al. 2024) — misinformation_and_propaganda,2024-04-01,2024-04-05,1440,RTM Research Team
+RTM-081,phishing,BIPIA (Yi et al. 2023),2023-11-01,2023-11-05,720,RTM Research Team
+RTM-082,phishing,BIPIA (Yi et al. 2023),2023-12-01,2023-12-05,1440,RTM Research Team
+RTM-083,goal_hijacking,AgentVigil (Xu et al. 2024),2024-07-01,2024-07-05,1440,RTM Research Team
+RTM-084,goal_hijacking,AgentVigil (Xu et al. 2024),2024-08-01,2024-08-05,720,RTM Research Team
+RTM-085,malware_distribution,InjecAgent (Zhan et al. 2024) — malware_distribution,2024-03-01,2024-03-05,480,RTM Research Team
+RTM-086,malware_distribution,InjecAgent (Zhan et al. 2024) — malware_distribution,2024-04-01,2024-04-05,720,RTM Research Team
+RTM-087,data_eavesdropping,InjecAgent (Zhan et al. 2024) — data_eavesdropping,2024-03-01,2024-03-05,480,RTM Research Team
+RTM-088,data_eavesdropping,InjecAgent (Zhan et al. 2024) — data_eavesdropping,2024-04-01,2024-04-05,720,RTM Research Team
+RTM-089,corporate_espionage,InjecAgent (Zhan et al. 2024) — business_intelligence,2024-03-01,2024-03-05,720,RTM Research Team
+RTM-090,corporate_espionage,Research (2024),2024-08-01,2024-08-05,1440,RTM Research Team
+RTM-091,indirect_prompt_injection,BIPIA (Yi et al. 2023),2023-12-15,2023-12-17,1440,RTM Research Team
+RTM-092,indirect_prompt_injection,Research (2024),2024-09-01,2024-09-05,2880,RTM Research Team
+RTM-093,obfuscation_evasion,Research (2023),2023-10-01,2023-10-05,4320,RTM Research Team
+RTM-094,obfuscation_evasion,Research (2024),2024-06-01,2024-06-05,2880,RTM Research Team
+RTM-095,privilege_escalation,OWASP LLM01:2025,2025-01-15,2025-01-17,720,RTM Research Team
+RTM-096,goal_hijacking,BIPIA (Yi et al. 2023),2023-11-20,2023-11-22,1440,RTM Research Team
+RTM-097,goal_hijacking,BIPIA (Yi et al. 2023),2023-12-10,2023-12-12,2880,RTM Research Team
+RTM-098,code_injection,Research (2024),2024-05-01,2024-05-05,1440,RTM Research Team
+RTM-099,code_injection,OWASP LLM01:2025,2025-01-01,2025-01-05,480,RTM Research Team
+RTM-100,exfiltration,Research (2024),2024-08-01,2024-08-05,720,RTM Research Team
+RTM-101,goal_hijacking,Research (2024),2024-09-01,2024-09-05,2880,RTM Research Team
+RTM-102,data_manipulation,MITRE ATLAS,2024-03-01,2024-03-05,1440,RTM Research Team
+RTM-103,memory_poisoning,DataSentinel (2024),2024-10-15,2024-10-17,720,RTM Research Team
+RTM-104,social_engineering,Research (2024),2024-06-01,2024-06-05,2880,RTM Research Team
+RTM-105,jailbreaking,Research (2023),2023-11-01,2023-11-05,1440,RTM Research Team
+RTM-106,indirect_prompt_injection,BIPIA (Yi et al. 2023),2024-01-01,2024-01-05,1440,RTM Research Team
+RTM-107,obfuscation_evasion,Research (2024),2024-07-01,2024-07-05,4320,RTM Research Team
+RTM-108,privilege_escalation,MITRE ATLAS,2024-04-01,2024-04-05,480,RTM Research Team
+RTM-109,denial_of_service,Research (2024),2024-08-01,2024-08-05,2880,RTM Research Team
+RTM-110,goal_hijacking,DataSentinel (2024),2024-11-01,2024-11-05,1440,RTM Research Team
+RTM-111,supply_chain,MITRE ATLAS,2024-05-01,2024-05-05,720,RTM Research Team
+RTM-112,supply_chain,Research (2024),2024-07-01,2024-07-05,2880,RTM Research Team
+RTM-113,reconnaissance,InjecAgent (Zhan et al. 2024) — introduce_system_fingerprinting,2024-03-01,2024-03-05,1440,RTM Research Team
+RTM-114,reconnaissance,MITRE ATLAS T0042,2024-02-01,2024-02-05,720,RTM Research Team
+RTM-115,goal_hijacking,OWASP LLM01:2025,2025-03-01,2025-03-03,2880,RTM Research Team
+RTM-116,indirect_prompt_injection,BIPIA (Yi et al. 2023),2024-01-15,2024-01-17,2880,RTM Research Team
+RTM-117,obfuscation_evasion,Research (2024),2024-05-01,2024-05-05,2880,RTM Research Team
+RTM-118,exfiltration,Research (2024),2024-09-01,2024-09-05,720,RTM Research Team
+RTM-119,data_manipulation,MITRE ATLAS,2024-07-01,2024-07-05,2880,RTM Research Team
+RTM-120,goal_hijacking,OWASP LLM01:2025,2025-01-20,2025-01-22,1440,RTM Research Team
+RTM-121,supply_chain,OWASP LLM02:2025,2025-02-10,2025-02-12,1440,RTM Research Team
+RTM-122,supply_chain,MITRE ATLAS AML.T0010,2024-11-05,2024-11-08,2880,RTM Research Team
+RTM-123,indirect_prompt_injection,Research (2024),2024-06-12,2024-06-14,1440,RTM Research Team
+RTM-124,indirect_prompt_injection,OWASP LLM01:2025,2024-12-01,2024-12-03,1440,RTM Research Team
+RTM-125,goal_hijacking,Research (2024),2024-07-15,2024-07-18,720,RTM Research Team
+RTM-126,jailbreaking,OWASP LLM01:2025,2024-03-20,2024-03-22,720,RTM Research Team
+RTM-127,jailbreaking,Research (2024),2024-04-10,2024-04-12,1440,RTM Research Team
+RTM-128,exfiltration,MITRE ATLAS AML.T0025,2024-08-19,2024-08-21,720,RTM Research Team
+RTM-129,exfiltration,OWASP LLM01:2025,2024-05-18,2024-05-20,720,RTM Research Team
+RTM-130,code_injection,OWASP LLM05:2025,2024-09-14,2024-09-16,1440,RTM Research Team
+RTM-131,code_injection,OWASP Top 10 A03,2024-02-11,2024-02-13,720,RTM Research Team
+RTM-132,privilege_escalation,OWASP LLM01:2025,2024-10-04,2024-10-06,1440,RTM Research Team
+RTM-133,privilege_escalation,Research (2025),2025-01-08,2025-01-10,2880,RTM Research Team
+RTM-134,denial_of_service,OWASP LLM04:2025,2024-04-22,2024-04-24,1440,RTM Research Team
+RTM-135,denial_of_service,Research (2024),2024-06-30,2024-07-02,1440,RTM Research Team
+RTM-136,memory_poisoning,OWASP LLM01:2025,2024-11-20,2024-11-22,2880,RTM Research Team
+RTM-137,memory_poisoning,Research (2025),2025-02-02,2025-02-04,1440,RTM Research Team
+RTM-138,social_engineering,OWASP LLM01:2025,2024-08-05,2024-08-07,720,RTM Research Team
+RTM-139,social_engineering,Research (2024),2024-09-25,2024-09-27,1440,RTM Research Team
+RTM-140,obfuscation_evasion,MITRE ATLAS AML.T0015,2024-03-12,2024-03-15,1440,RTM Research Team
+RTM-141,obfuscation_evasion,Research (2024),2024-05-19,2024-05-21,1440,RTM Research Team
+RTM-142,data_manipulation,OWASP LLM06:2025,2024-10-18,2024-10-20,1440,RTM Research Team
+RTM-143,data_manipulation,OWASP LLM06:2025,2024-11-12,2024-11-14,1440,RTM Research Team
+RTM-144,network_propagation,Research (2024),2024-12-14,2024-12-16,1440,RTM Research Team
+RTM-145,network_propagation,OWASP LLM01:2025,2025-01-14,2025-01-16,1440,RTM Research Team
+RTM-146,ransomware,MITRE ATLAS AML.T0020,2024-07-28,2024-07-30,720,RTM Research Team
+RTM-147,reconnaissance,OWASP Top 10 A10,2024-03-05,2024-03-07,720,RTM Research Team
+RTM-148,reconnaissance,MITRE ATLAS AML.T0014,2024-04-14,2024-04-16,720,RTM Research Team
+RTM-149,device_enumeration,MITRE ATLAS AML.T0014,2024-05-27,2024-05-29,1440,RTM Research Team
+RTM-150,phishing,OWASP LLM01:2025,2024-06-18,2024-06-20,720,RTM Research Team
+RTM-151,corporate_espionage,Research (2024),2024-08-30,2024-09-02,1440,RTM Research Team
+RTM-152,malware_distribution,MITRE ATLAS AML.T0019,2024-10-11,2024-10-13,720,RTM Research Team
+RTM-153,information_manipulation,OWASP LLM06:2025,2024-11-28,2024-11-30,1440,RTM Research Team
+RTM-154,indirect_prompt_injection,BIPIA (Yi et al. 2023),2024-07-08,2024-07-10,1440,RTM Research Team
+RTM-155,goal_hijacking,OWASP LLM01:2025,2025-02-18,2025-02-20,720,RTM Research Team

@@ -1,0 +1,16 @@
+\begin{table*}[t]
+\centering
+\caption{Table VIII: Pre-Specified Hypotheses and Observed Empirical Verdicts}
+\begin{tabular}{l l l c}
+\hline
+\textbf{Hypothesis} & \textbf{Pre-registered Formal Criterion} & \textbf{Empirical Observation} & \textbf{Verdict} \\
+\hline
+H1 (RQ1) & B3 $\text{ASR} < \text{B1}$ at equal or lower FPR & $\text{ASR}: 8.3\% < 25.0\%$, $\text{FPR}: 0.0\% \le 10.0\%$ & \textbf{Supported} \\
+H2 (RQ2) & $AG > 0$ (95\% CI above 0), $\Delta\text{FPR} \le 1.0\text{ pp}$ & Mean $AG = +88.9\%$ [95\% CI $>0$], $\Delta\text{FPR} = +0.00\%$ & \textbf{Supported} \\
+H3 (RQ3) & B3 attains lower ASR than B1, B2 under fuzzing & B3 ASR strictly lower across budgets 50--500 & \textbf{Supported} \\
+H4 (RQ4) & $\text{EVR} \ge 90\%$, $\kappa \ge 0.60$, 0 privacy leaks & $\text{EVR} = 94.0\%$, $\kappa = 1.000$, 0 leaks detected & \textbf{Supported} \\
+H5 (RQ5) & TSR within 5.0 pp B0; non-inferior to B5 (margin $\Delta = 5.0\text{ pp}$); lower latency & TSR $\Delta = 0.0\text{ pp}$; ASR non-inferior ($-4.2\text{ pp} < +5.0\text{ pp}$, $p = 0.016$); latency: $5.0\,\text{ms} \ll 1102.9\,\text{ms}$ & \textbf{Supported} \\
+H6 (RQ6) & $\text{MPS} = 0\%$ (candidates); $\le 5\%$ (verified-crafted) & $\text{MPS}_{\text{cand}} = 0.0\%$, $\text{MPS}_{\text{craft}} = 0.0\%$ & \textbf{Supported} \\
+\hline
+\end{tabular}
+\end{table*}

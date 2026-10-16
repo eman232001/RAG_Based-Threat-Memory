@@ -1,0 +1,26 @@
+\begin{table}[t]
+\centering
+\caption{Table VII: Ablation Results on Controlled Diagnostic Partition (Experiment E6)}
+\begin{tabular}{l c c c c}
+\hline
+\textbf{Configuration} & \textbf{ASR} $\downarrow$ & \textbf{FPR} $\downarrow$ & \textbf{F1} $\uparrow$ & \textbf{EVR} $\uparrow$ \\
+\hline
+\textbf{Full RTM (B3)}$^\dagger$ & \textbf{8.3\%} & \textbf{0.0\%} & \textbf{0.957} & \textbf{94.0\%} \\
+− memory & 25.0\% & 10.0\% & 0.818 & N/A \\
+− detector & 41.7\% & 10.0\% & 0.700 & 94.0\% \\
+− calibration & 16.7\% & 30.0\% & 0.800 & 94.0\% \\
+− segmentation & 25.0\% & 10.0\% & 0.818 & 94.0\% \\
+− exemplars & 25.0\% & 10.0\% & 0.818 & 75.0\% \\
+k = 1 & 16.7\% & 10.0\% & 0.870 & 94.0\% \\
+k = 3 & 16.7\% & 10.0\% & 0.870 & 94.0\% \\
+k = 10 & 25.0\% & 10.0\% & 0.818 & 94.0\% \\
+B3-rand & 25.0\% & 40.0\% & 0.720 & 0.0\% \\
+B3-lex & 25.0\% & 10.0\% & 0.818 & 0.0\% \\
+\hline
+\multicolumn{5}{l}{\small $^\dagger$Controlled diagnostic partition ($n=22$); full benchmark metrics reported in Table III.} \\
+\multicolumn{5}{l}{\small EVR is not defined for $-$ memory, because no record is retrieved to cite.} \\
+\multicolumn{5}{l}{\small Median local middleware latency: B3 = 22.0\,ms (P95: 38.6\,ms); MELON = 1102.9\,ms.} \\
+\multicolumn{5}{l}{\small Median Time-to-Protect (TTP): 1440\,minutes (24.0\,hours) across 155 verified records.} \\
+\hline
+\end{tabular}
+\end{table}

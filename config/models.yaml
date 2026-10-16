@@ -1,0 +1,39 @@
+# =============================================================================
+# models.yaml — Dynamic model configuration
+# To switch any model: edit this file only. Zero code changes required.
+# =============================================================================
+
+base_detector:
+  provider: "gemini"              # options: "gemini" | "ollama"
+  model: "gemini-flash-lite-latest" # High throughput, zero daily cap
+  temperature: 0
+  max_output_tokens: 50           # Score + verdict only — short response
+  use_logprobs: false             # Gemini does not expose token log-probs
+  score_mode: "json_0_100"        # "logprob" | "json_0_100"
+  # Note: json_0_100 fallback used and documented in paper (Section V-D)
+  prompt_file: "config/detector_prompt.txt"
+
+agent_llm:
+  provider: "gemini"
+  model: "gemini-flash-lite-latest"
+  temperature: 0
+  max_output_tokens: 2048
+
+second_agent_llm:
+  # Used only for robustness cross-model test in E3 (supplementary)
+  provider: "ollama"
+  model: "llama3:latest"
+  temperature: 0
+  max_output_tokens: 2048
+
+embedding:
+  model: "all-MiniLM-L6-v2"      # HuggingFace sentence-transformers
+  device: "cpu"                   # "cpu" | "cuda" — use cpu for 8GB VRAM safety
+  batch_size: 64
+  normalize: true                 # L2-normalize before FAISS indexing
+
+deberta_detector:
+  # B6 baseline — trained classifier
+  hf_model_id: "protectai/deberta-v3-base-prompt-injection-v2"
+  device: "cpu"
+  threshold: 0.5                  # Pre-calibration default for B6

@@ -1,0 +1,18 @@
+\begin{table*}[t]
+\centering
+\caption{Table IV: Leave-One-Family-Out Threat Adaptation Gain (Experiment E2)}
+\begin{tabular}{l c c c c c}
+\hline
+\textbf{Threat Family ($n$)} & $\text{ASR}_{\text{before}}$ (B3) & $\text{ASR}_{\text{after}}$ (B3) & \textbf{Adaptation Gain ($AG$)} [95\% Bootstrap CI] & $\text{ASR}$ (B4 Few-shot) & $\text{ASR}_{\text{upper}}$ \\
+\hline
+data_security_harm ($n=3$) & 100.0\% & 0.0\% & \textbf{+100.0\%} [+100.0, +100.0] & 0.0\% & 0.0\% \\
+financial_data ($n=3$) & 66.7\% & 0.0\% & \textbf{+66.7\%} [+0.0, +100.0] & 0.0\% & 0.0\% \\
+financial_harm ($n=3$) & 100.0\% & 0.0\% & \textbf{+100.0\%} [+100.0, +100.0] & 0.0\% & 0.0\% \\
+language_translation ($n=3$) & 100.0\% & 0.0\% & \textbf{+100.0\%} [+100.0, +100.0] & 0.0\% & 0.0\% \\
+physical_data ($n=3$) & 66.7\% & 0.0\% & \textbf{+66.7\%} [+0.0, +100.0] & 0.0\% & 0.0\% \\
+physical_harm ($n=3$) & 100.0\% & 0.0\% & \textbf{+100.0\%} [+100.0, +100.0] & 0.0\% & 0.0\% \\
+\hline
+\multicolumn{6}{l}{\small $\Delta\text{FPR} = +0.00\%$ on benign hold-out test set (acceptance limit: $\le 1.0\%$)} \\
+\hline
+\end{tabular}
+\end{table*}

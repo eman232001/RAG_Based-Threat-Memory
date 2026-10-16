@@ -1,0 +1,40 @@
+# =============================================================================
+# requirements.txt — Pinned dependencies for RTM project
+# Install: pip install -r requirements.txt
+# =============================================================================
+
+# --- LLM API clients ---
+google-generativeai>=0.8.0         # Gemini API
+requests>=2.32.0                    # Ollama HTTP calls + dataset downloads
+
+# --- Embeddings & vector search ---
+sentence-transformers>=3.0.0        # all-MiniLM-L6-v2 embeddings
+faiss-cpu>=1.8.0                    # Exact inner-product index (= cosine on L2-normalized)
+rank-bm25>=0.2.2                    # BM25 lexical retrieval (B3-lex control)
+
+# --- Data processing & statistics ---
+pandas>=2.2.0                       # Dataset handling and cases.csv
+numpy>=1.26.0                       # Numerical operations
+scipy>=1.13.0                       # Isotonic regression, statistical tests
+scikit-learn>=1.5.0                 # Platt scaling, metrics
+statsmodels>=0.14.2                 # Wilson CI, McNemar test, Holm correction
+
+# --- NLP utilities ---
+nltk>=3.8.1                         # Sentence tokenization for segmenter
+transformers>=4.41.0                # DeBERTa (B6 baseline)
+torch>=2.3.0                        # Required by transformers (CPU-only ok)
+
+# --- AgentDojo ---
+agentdojo>=0.1.0                    # Agent execution environment
+
+# --- Configuration & utilities ---
+pyyaml>=6.0.1                       # YAML config loading
+python-dotenv>=1.0.0                # Optional .env support
+
+# --- Testing ---
+pytest>=8.2.0                       # Unit tests
+pytest-cov>=5.0.0                   # Coverage reporting
+
+# --- Visualization ---
+matplotlib>=3.9.0                   # Fig. 3: ASR vs. query budget
+seaborn>=0.13.2                     # Optional: better-looking plots

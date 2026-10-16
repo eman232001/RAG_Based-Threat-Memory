@@ -1,0 +1,79 @@
+# =============================================================================
+# experiment.yaml — All experiment parameters
+# =============================================================================
+
+retrieval:
+  k_default: 5
+  k_sensitivity: [1, 3, 5, 10]   # All logged simultaneously in cases.csv
+  window_size_sentences: 3        # Segmenter: 3-sentence windows
+  stride_sentences: 1             # Segmenter: stride = 1 sentence
+  max_tokens_per_window: 128      # Segmenter: truncate window at 128 tokens
+  max_tokens_per_record: 256      # Memory: max record size in tokens
+
+calibration:
+  fpr_budget: 0.01                # FPR <= 1% on calibration partition — FIXED in prereg.yaml
+  alpha_grid: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+  tau_grid_steps: 100             # 100 evenly spaced thresholds in [0, 1]
+  calibration_method: "isotonic"  # "isotonic" | "platt"
+  optimize_metric: "f1"           # Maximize F1 subject to FPR budget
+
+experiments:
+  seeds: [1, 2, 3]               # All E1/E2/E6 runs repeated 3 times
+
+  e1_systems:
+    - "B0"
+    - "B1"
+    - "B2"
+    - "B3"
+    - "B4"
+    - "B5"
+    - "B6"
+
+  e2_families_min: 5              # Leave-one-family-out: minimum 5 families
+  e2_variants_per_family: 100     # Minimum variants per held-out family
+
+  e3_query_budgets: [50, 100, 200, 500]
+  e3_fuzzer_seeds_min: 50
+  e3_systems: ["B1", "B2", "B3", "B5"]
+  e3_mutation_types:
+    - "semantic_paraphrase"
+    - "multilingual"
+    - "unicode_obfuscation"
+    - "encoding_tricks"
+    - "payload_splitting"
+    - "memory_aware"
+    - "explanation_targeting"
+
+  e4_poison_types: ["false", "contradictory", "out_of_scope", "stale", "malicious"]
+  e4_per_type: 20                 # >= 20 per type = >= 100 total
+
+  e5_explanations_sample: 50      # Minimum explanations for reviewer evaluation
+
+  e6_ablation_configs:
+    - "B3_rand"
+    - "B3_lex"
+    - "B3_no_cal"
+    - "B3_no_seg"
+    - "B3_no_ex"
+    - "B3_k1"
+    - "B3_k3"
+    - "B3_k10"
+
+memory:
+  min_records: 150
+  min_families: 8
+  dedup_embedding_threshold: 0.95  # Cosine similarity threshold for near-dup
+  dedup_edit_distance_threshold: 5  # Edit distance threshold for near-dup
+
+partitions:
+  calibration_min_attacks: 300
+  calibration_min_benign: 300
+  benign_test_min: 500
+  benign_test_hard_neg_min: 100
+  leakage_sim_threshold: 0.90      # Max allowed similarity between test and memory
+  leakage_edit_threshold: 10       # Min edit distance between test and memory
+
+statistics:
+  ci_level: 0.95                  # Wilson confidence interval level
+  alpha_holm: 0.05                # Holm correction significance level
+  power_analysis_min_power: 0.80

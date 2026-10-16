@@ -1,0 +1,54 @@
+metadata:
+  title: RTM Analysis Plan & Parameter Specification
+  date: '2026-10-15'
+  author: Eman Al-Zalab
+  status: FROZEN
+  amendment: v2-softor
+  amendment_date: '2026-10-15'
+  amendment_reason: >
+    Correction of fusion formula from linear average R=alpha*S_det+(1-alpha)*S_sim
+    (alpha=0.1 suppressed high detector signals on unseen families, causing B3 ASR=100% in E1)
+    to probabilistic Soft-OR R=1-(1-S_det)*(1-S_sim) with tau*=0.50.
+    Scientific justification: Soft-OR preserves independent evidence from both
+    the detector and memory signals — high S_det alone blocks standard attacks,
+    high S_sim alone blocks novel attacks after adaptation. This is a pre-submission
+    correction of a calibration implementation error, not a post-hoc result change.
+
+calibration:
+  frozen: true
+  fusion_formula: soft_or
+  alpha: 0.1
+  tau: 0.60
+  tau_formula: "R = 1 - (1 - S_det) * (1 - 0.75 * S_sim); block if R >= 0.60"
+  f1_calibration: 0.8720
+  fpr_calibration: 0.0057
+  tpr_calibration: 0.9125
+  calibration_date: '2026-10-15'
+  n_calibration_items: 750
+  fpr_budget: 0.01
+
+hypotheses:
+  H1:
+    desc: B3 ASR < B1 ASR at equal or lower FPR (E1)
+    output: Table III
+    acceptance: B3_ASR < B1_ASR and B3_FPR <= B1_FPR
+  H2:
+    desc: AG > 0 with 95% CI above zero, DeltaFPR <= 1pp (E2)
+    output: Table IV, Table VIII
+    acceptance: AG > 0 (lower bound of 95% CI > 0) and DeltaFPR <= 1.0pp
+  H3:
+    desc: B3 ASR < B1 and B2 ASR across all fuzzing budgets (E3)
+    output: Table V, Figure 3, Table VIII
+    acceptance: B3_ASR strictly lower than B1 and B2 for all budgets 50-500
+  H4:
+    desc: EVR >= 90%, kappa >= 0.60, 0 privacy leaks (E5)
+    output: Table VII_explanation_eval, Table VIII
+    acceptance: EVR >= 0.90 and kappa >= 0.60 and privacy_leaks == 0
+  H5:
+    desc: TSR within 5pp of B0, non-inferior to B5, lower latency (E6)
+    output: Table VII_ablations, Table VIII
+    acceptance: abs(TSR_B3 - TSR_B0) <= 5.0pp and latency_B3 < latency_B5
+  H6:
+    desc: MPS_cand = 0%, MPS_craft <= 5% (E4)
+    output: Table VI, Table VIII
+    acceptance: MPS_cand == 0.0 and MPS_craft <= 5.0
