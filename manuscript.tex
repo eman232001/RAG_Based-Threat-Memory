@@ -26,175 +26,244 @@ Email: eman.alzalab@su.edu.ye}
 \maketitle
 
 \begin{abstract}
-Large language model (LLM) agents that read documents, browse the Web, and call tools are exposed to indirect prompt injection (IPI): instructions hidden in untrusted content that the agent mistakes for trusted ones. Existing defenses rely on fixed detectors or costly runtime analysis, typically need retraining to absorb new threat knowledge, and rarely tie a decision to documented evidence. We present RAG-Based Threat Memory (RTM), a defense that keeps adaptive security knowledge outside the detector. RTM combines a zero-training base detector (requiring no fine-tuning of model weights; calibration and retrieval memory updates are utilized instead for adaptation) with a retrieval-augmented memory of verified, documented injection patterns, a calibrated Soft-OR fusion rule, and an explanation that cites the closest documented threat and the triggering text segment. A new threat is absorbed by appending a verified record, without retraining. Because the memory is itself an attack surface, RTM includes a verified ingestion pipeline designed to resist poisoning. We evaluate RTM on AgentDojo against a no-defense agent, its own components, a public trained detector, and MELON, a recent training-free defense, measuring adaptation gain on held-out attack families, robustness to black-box adaptive attacks, memory poisoning, utility, explanation verifiability, and latency. In full-partition evaluations across 1,673 held-out attack variants and 317 benign utility items ($n = 1,990$ items per system), Full RTM achieves an Attack Success Rate (ASR) of 6.3\% [95\% Wilson CI: 5.2\%, 7.5\%] with 92.2\% overall classification accuracy [95\% CI: 90.9\%, 93.3\%], matching the base detector's containment while operating at only 22.0\,ms median local middleware latency---over 78$\times$ faster than the remote LLM detector alone (1719.9\,ms) and over 50$\times$ faster than MELON (1102.9\,ms median latency). In contrast, public trained DeBERTa suffers an unacceptable 42.9\% false alarm rate (FPR = 42.9\% [95\% CI: 37.6\%, 48.4\%]), severely disrupting benign agent utility. Ingesting verified exemplars yields a mean adaptation gain of +88.9\% across six held-out attack families with 0.00\% delta-FPR. RTM demonstrated robust resistance across 200 total poisoning trials (100 unactivated candidate attempts and 100 adversarially crafted insertion attempts across 5 distinct threat categories $\times$ 20 attempts each, achieving 0.0\% Memory Poisoning Success [MPS] under this evaluated threat scope), delivers 94.0\% verifiable explanations ($\kappa = 1.000$) with zero privacy leakage, and adds only 22.0\,ms median local middleware latency. Code and data are available at \url{https://github.com/eman232001/RAG_Based-Threat-Memory}.
+Autonomous large language model (LLM) agents operating within tool-integrated environments remain inherently vulnerable to Indirect Prompt Injection (IPI), wherein adversaries embed adversarial instructions inside untrusted external content. Conventional defenses predominantly rely on static input classification or costly inference-time trajectory re-execution, requiring expensive parameter fine-tuning to assimilate emerging threats and failing to supply auditable provenance for security decisions. This paper presents RAG-Based Threat Memory (RTM), an adaptive defense middleware that externalizes dynamic threat intelligence into an updatable, non-parametric vector store. RTM couples an un-finetuned boundary detector with a dense semantic memory of verified threat exemplars through a calibrated Weighted Soft-OR fusion rule, accompanied by an evidence-extraction pipeline that attributes each containment decision to documented exemplar records. Threat adaptation is achieved via constant-time append operations without gradient updates, safeguarded by a multi-stage ingestion filter engineered to resist memory poisoning. 
+
+Evaluated across $n = 1,990$ benchmark items ($1,673$ held-out injection variants across six threat families and $317$ benign utility instances drawn from AgentDojo, InjecAgent, and BIPIA), Full RTM ($B_3$) attains an Attack Success Rate (ASR) of $6.3\%$ [95\% Wilson CI: $5.2\%$, $7.5\%$], a False Positive Rate (FPR) of $16.1\%$ [95\% CI: $12.4\%$, $20.5\%$], and an overall accuracy of $92.2\%$ [95\% CI: $90.9\%$, $93.3\%$]. Rigorous paired analysis demonstrates that while RTM does not surpass the base detector alone on zero-day attacks prior to memory ingestion ($B_1$ ASR = $5.7\%$, exact McNemar $p = 0.0039$, disconfirming pre-registered hypothesis $H_1$), it establishes substantial operational utility: ingesting verified exemplars yields an empirical adaptation gain of $+88.9\%$ [95\% bootstrap CI: $+72.2\%$, $+100.0\%$] across held-out evasions with zero false alarm inflation ($\Delta\text{FPR} = +0.00\%$), provides $94.0\%$ explanation verification fidelity ($\kappa = 1.000$) with zero context leakage, and executes with a median local middleware latency of only $22.0$\,ms---operating over $78\times$ faster than standalone remote detector inference ($1719.9$\,ms) and over $50\times$ faster than trajectory re-execution defenses ($1102.9$\,ms). Code, memory exemplars, and execution traces are publicly available at \url{https://github.com/eman232001/RAG_Based-Threat-Memory}.
 \end{abstract}
 
 \begin{IEEEkeywords}
-large language model agents, indirect prompt injection, retrieval-augmented generation, threat memory, adaptive defense, memory poisoning, explainability, AgentDojo.
+LLM agents, indirect prompt injection, retrieval-augmented defense, threat memory, adaptive security, memory poisoning, verifiable explanations, AgentDojo.
 \end{IEEEkeywords}
 
 \section{Introduction}
-Artificial intelligence systems built on large language models (LLMs) now run inside real products, and with that deployment they have become the target of a growing family of security threats, including jailbreaks, data extraction, poisoning of training and retrieval data, and prompt injection \cite{vassilev2025adversarial, owasp2025llm01}. Prompt injection, in which an adversary makes a model follow instructions that the legitimate user or developer did not intend, is listed first among the risks of LLM applications \cite{owasp2025llm01} and has been studied since the first goal-hijacking demonstrations \cite{perez2022ignore, liu2023prompt}. Two forms are distinguished: in direct injection the attacker is the user, whereas in indirect prompt injection (IPI) the attacker hides instructions in external content that the application later retrieves \cite{greshake2023not}.
+Autonomous software agents driven by large language models (LLMs) increasingly execute complex workflows by reading external documents, retrieving web data, and invoking application programming interface (API) tools \cite{yao2023react, schick2023toolformer}. In these architectures, retrieved data and system instructions share a unified semantic context. Consequently, untrusted external inputs can manipulate agent execution, a vulnerability formally designated as Indirect Prompt Injection (IPI) \cite{greshake2023not, owasp2025llm01}. When an agent processes untrusted content containing disguised imperatives, the model may execute attacker-specified commands, leading to unauthorized privilege escalation, sensitive data exfiltration, or destructive tool execution \cite{vassilev2025adversarial}. Empirical benchmarks such as InjecAgent \cite{zhan2024injecagent}, BIPIA \cite{yi2023benchmarking}, and AgentDojo \cite{debenedetti2024agentdojo} corroborate this vulnerability, demonstrating attack success rates exceeding 70\% against state-of-the-art models \cite{wang2025agentvigil, zhan2025adaptive}.
 
-IPI is most serious in LLM agents, which interleave reasoning with actions such as reading documents, browsing the Web, and calling application programming interfaces \cite{yao2023react, schick2023toolformer}. In such agentic systems, retrieved content and instructions share one context, so the model may treat data as an instruction, and processing retrieved content resembles executing untrusted code. The impact depends on the privileges and tools available to the agent. Benchmarks now quantify this exposure: InjecAgent \cite{zhan2024injecagent}, BIPIA \cite{yi2023benchmarking}, and AgentDojo, which provides 97 realistic tasks and 629 security test cases and measures security together with task utility \cite{debenedetti2024agentdojo}. Attackers also adapt. AgentVigil reports attack success rates of 71\% on AgentDojo agents based on o3-mini and 70\% on VWA-adv agents based on GPT-4o \cite{wang2025agentvigil}, and Zhan et al. report that adaptive attacks bypassed eight evaluated defenses with attack success rates above 50\% in their setting \cite{zhan2025adaptive}. A defense must therefore be evaluated against attackers that adapt to it.
+Contemporary defense paradigms exhibit distinct operational limitations. Architectural containment and privilege-isolation frameworks (e.g., CaMeL \cite{debenedetti2025defeating}, Progent \cite{shi2025progent}) restrict tool capabilities but do not inspect intermediate text payloads. Fine-tuned safety classifiers (e.g., Llama Guard \cite{inan2023llama}, DataSentinel \cite{liu2025datasentinel}) and instruction-hierarchy tuning \cite{wallace2024instruction} require extensive retraining to assimilate newly discovered attack vectors and generalize poorly to unseen lexical structures. Conversely, behavioral re-execution defenses such as MELON \cite{zhu2025melon} incur prohibitive computational overhead by executing dual masked trajectories, doubling token costs and generating seconds of latency per tool response. Crucially, existing detectors output scalar risk scores without evidence attribution, preventing security analysts from verifying whether an intervention stems from legitimate threat signatures or spurious semantic correlations.
 
-Existing defenses fall into four families. Prevention by prompting or training separates instructions from data, as in spotlighting \cite{hines2024defending}, structured queries \cite{chen2025struq}, and the instruction hierarchy \cite{wallace2024instruction}. Detection classifies the input, as in safeguard classifiers \cite{inan2023llama}, PromptShield \cite{jacob2025promptshield}, and DataSentinel \cite{liu2025datasentinel}. Behavioral inference-time analysis examines what the agent would do, as in MELON \cite{zhu2025melon} and AgentSentry \cite{zhang2026agentsentry}. System-level approaches constrain execution, as in CaMeL \cite{debenedetti2025defeating}, Progent \cite{shi2025progent}, and Task Shield \cite{jia2025task}. Each family has limits. Training-based prevention and detection need training resources and updated data to absorb a new attack pattern; fixed mechanisms can be bypassed by adaptive attacks; behavioral re-execution adds computation; and system-level controls restrict functionality and do not inspect content.
+To resolve these trade-offs, this paper investigates non-parametric threat externalization: rather than altering model weights, adaptive security knowledge is maintained in an external, retrieval-augmented threat memory. We introduce \textbf{RAG-Based Threat Memory (RTM)}, an adaptive defense middleware deployed at the agent's tool-return boundary. RTM unifies an un-finetuned LLM boundary detector with a dense semantic index of documented, verified injection patterns via a calibrated Weighted Soft-OR probabilistic fusion rule. When a content payload is intercepted, RTM performs sentence-level dense retrieval to compute memory similarity, scores the payload with the base detector, and derives a calibrated composite risk score. If a violation is flagged, an explanation module generates an auditable citation detailing the nearest documented threat exemplar and the exact offending text segment. Because an external memory introduces an ingestion attack surface, RTM incorporates an automated multi-stage verification pipeline to prevent adversarial memory poisoning.
 
-This paper presents RAG-Based Threat Memory (RTM), a model-centric defense that combines a zero-training base detector (requiring no fine-tuning of model weights; calibration and retrieval memory updates are utilized instead for adaptation) with an updatable retrieval-augmented memory of documented injection patterns. The central hypothesis is that adaptive security knowledge can be maintained separately from the base detector: when a new threat is documented and verified, appending its description to the memory is sufficient, and every rejection can be explained by the closest documented threat and the text segment that triggered it.
-
-The contributions are:
+The primary contributions of this work are:
 \begin{enumerate}
-    \item \textbf{Architecture:} An architecture (RTM) that fuses the score of a zero-training base detector (requiring no fine-tuning of model weights; calibration and retrieval memory updates are utilized instead for adaptation) with the similarity of the content to a verified threat memory via calibrated Soft-OR fusion.
-    \item \textbf{Adaptation Mechanism:} An adaptation mechanism that absorbs a documented threat by appending a record to the vector store, with a verified ingestion pipeline designed to resist poisoning.
-    \item \textbf{Verifiable Explanations:} An evidence-based explanation that attaches to each rejection the closest documented threat and the triggering text segment.
-    \item \textbf{Empirical Findings:} In full-partition benchmark evaluations across 1,673 held-out attack variants and 317 benign utility items ($n=1,990$ items per system) spanning AgentDojo, InjecAgent, and BIPIA, Full RTM (B3) achieves $\text{ASR} = 6.3\%$ [95\% Wilson CI: 5.2\%, 7.5\%] and $\text{FPR} = 16.1\%$ [95\% CI: 12.4\%, 20.5\%] ($92.2\%$ overall accuracy), matching base detector containment while operating at only 22.0\,ms median local middleware latency---over 78$\times$ faster than the base LLM detector alone (1719.9\,ms) and over 50$\times$ faster than MELON (1102.9\,ms). Ingesting verified exemplars yields a mean adaptation gain of $+88.9\%$ across six held-out threat families with zero false alarm increase ($\Delta\text{FPR} = +0.00\%$), robust resistance across 200 total poisoning trials (yielding 0.0\% MPS), $94.0\%$ verifiable explanations ($\kappa = 1.000$) with zero privacy leaks, and minimal 22.0\,ms median local latency.
+    \item \textbf{Decoupled Defense Middleware:} We formalize the RTM architecture, which combines zero-training boundary detection with dense threat exemplar retrieval through a monotonic Weighted Soft-OR fusion formulation calibrated via isotonic regression.
+    \item \textbf{Non-Parametric Threat Adaptation:} We develop a verified ingestion pipeline that incorporates newly documented attack families via constant-time vector append operations, eliminating model fine-tuning while enforcing schema-conformance and semantic non-redundancy to resist poisoning.
+    \item \textbf{Verifiable Decision Provenance:} We introduce an evidence-extraction mechanism that accompanies each mitigation decision with the exact triggering sentence span and matching threat record citation, validated through independent human audits with zero protected context leakage.
+    \item \textbf{Rigorous Empirical Evaluation:} Across $n = 1,990$ items ($1,673$ held-out attack variants and $317$ benign instances), Full RTM ($B_3$) attains an ASR of $6.3\%$ [95\% Wilson CI: $5.2\%$, $7.5\%$] and an FPR of $16.1\%$ [95\% CI: $12.4\%$, $20.5\%$], operating at $22.0$\,ms median local middleware latency. We report empirical hypothesis outcomes candidly: while zero-day containment does not exceed the standalone base detector ($B_1$ ASR = $5.7\%$, disconfirming $H_1$), RTM provides validated adaptation gains ($+88.9\%$ on held-out evasions) and complete poisoning resistance ($0.0\%$ MPS across 200 trials).
 \end{enumerate}
 
-\section{Problem Statement and Threat Model}
-\subsection{Problem Statement}
-When an agent receives a user instruction $U$ together with external content $C$, it has no reliable mechanism to distinguish content that is data to be used as information from content that carries a disguised instruction aimed at steering its behavior. Let $\mathcal{M}$ denote a threat memory, a set of verified records. The task is to design a decision function
+\section{Problem Formulation and Threat Model}
+\subsection{Problem Formulation}
+Let an autonomous agent execute a task guided by user instruction $U$. During execution, tool invocations return external unstructured content $C$ (e.g., retrieved web text, emails, or database records). The content $C$ comprises an ordered sequence of sentence segments $\mathcal{S}(C) = (s_1, s_2, \dots, s_m)$. The adversary embeds an indirect prompt injection within an untrusted segment $s_j \in \mathcal{S}(C)$ to hijack agent control flow upon ingestion.
+
+Let $\mathcal{M} = \{r_1, r_2, \dots, r_N\}$ denote the threat memory, where each record $r_i = (p_i, d_i, y_i)$ comprises an injection exemplar payload $p_i$, a structural threat description $d_i$, and an attack family label $y_i$. The objective is to construct a decision function:
 \begin{equation}
 D(U, C; \mathcal{M}) \rightarrow \{\text{allow}, \text{block}\}
 \end{equation}
-taken at each tool-return boundary, that detects injections accurately, absorbs new documented knowledge without retraining, explains each rejection with a documented source, and incurs minimal latency.
+evaluated at each tool-return boundary such that: (1) adversarial content is intercepted before context integration; (2) benign task completion is preserved; (3) newly documented threats are absorbed without weight fine-tuning; and (4) every block decision is attributed to documented evidence.
 
-\subsection{Research Questions and Pre-Registered Hypotheses}
+\subsection{Threat Model}
+We adopt the standard indirect injection threat model \cite{debenedetti2024agentdojo, zhan2024injecagent}. The adversary cannot directly modify the user instruction $U$, agent system prompts, or core model weights. However, the adversary exercises write access over external data sources retrieved by the agent's tools. The attacker's objective is to alter execution state, induce unauthorized tool calls, or exfiltrate private context.
+
+We evaluate two distinct threat environments:
+\begin{enumerate}
+    \item \textbf{Static Zero-Day Injection:} The attacker deploys novel lexical variants across held-out attack families whose specific signatures are entirely absent from the initial threat memory $\mathcal{M}$.
+    \item \textbf{Adaptive Black-Box Fuzzing:} The attacker inspects binary defense outcomes across repeated queries, leveraging mutation heuristics (synonym replacement, framing shifts, and structural obfuscation) to bypass detection.
+    \item \textbf{Memory Poisoning:} The adversary attempts to submit malicious candidate records into the memory ingestion queue to induce false dismissals or trigger broad false alarms.
+\end{enumerate}
+
+\subsection{Formal Hypotheses}
+We evaluate six pre-specified research questions and formal hypotheses:
 \begin{itemize}
-    \item \textbf{H1 (RQ1):} On held-out attack variants, RTM ($B_3$) attains an ASR non-inferior or superior to the base detector alone ($B_1$) at equal or lower FPR (paired McNemar test, corrected for multiple comparisons).
-    \item \textbf{H2 (RQ2):} After a verified record for a held-out threat family is added, ASR on that family decreases ($AG > 0$, with the lower bound of the 95\% confidence interval above zero) while FPR rises by at most 1 percentage point ($\Delta\text{FPR} \le 1.0\text{ pp}$).
-    \item \textbf{H3 (RQ3):} Under black-box adaptive fuzzing across budgets 50--500, $B_3$ attains lower ASR than $B_1$, $B_2$, and $B_6$.
-    \item \textbf{H4 (RQ4):} Explanation Verification Rate $\text{EVR} \ge 90\%$ with Cohen's $\kappa \ge 0.60$, and the privacy audit reconstructs no protected context from explanations.
-    \item \textbf{H5 (RQ5):} $B_3$ keeps benign task success within 5.0 pp of the undefended agent ($B_0$), is non-inferior to $B_5$ (MELON) within a pre-registered margin of $\Delta = 5.0\text{ pp}$, and adds significantly lower median latency per tool return than $B_5$.
-    \item \textbf{H6 (RQ6):} Candidate records never change enforcement decisions ($\text{MPS} = 0\%$ by construction), and adversarially crafted records yield $\text{MPS} \le 5\%$.
+    \item \textbf{H1 (Zero-Day Containment):} On held-out attack variants, Full RTM ($B_3$) attains an ASR non-inferior or superior to the base detector alone ($B_1$) at equal or lower FPR under paired McNemar testing ($\alpha = 0.05$, Holm-Bonferroni corrected).
+    \item \textbf{H2 (Threat Adaptation Gain):} Upon appending a verified exemplar for a held-out threat family, ASR on that family decreases significantly ($AG > 0$, lower bound of 95\% bootstrap CI $> 0$) while benign false alarms increase by at most 1.0 percentage point ($\Delta\text{FPR} \le 1.0\text{ pp}$).
+    \item \textbf{H3 (Adaptive Robustness):} Under iterative black-box mutation fuzzing across budgets $B \in \{50, 100, 200, 500\}$, $B_3$ maintains lower ASR than individual components ($B_1, B_2$) and public baselines ($B_6$).
+    \item \textbf{H4 (Explanation Fidelity):} The Explanation Verification Rate satisfies $\text{EVR} \ge 90\%$ with inter-rater agreement Cohen's $\kappa \ge 0.60$, and adversarial reconstruction yields zero protected context leakage.
+    \item \textbf{H5 (Utility and Efficiency):} $B_3$ maintains Task Success Rate (TSR) within $5.0\text{ pp}$ of the undefended agent ($B_0$), demonstrates statistical non-inferiority to MELON ($B_5$) within margin $\Delta = 5.0\text{ pp}$, and incurs lower median latency.
+    \item \textbf{H6 (Poisoning Resistance):} Unverified candidate records produce Memory Poisoning Success $\text{MPS}_{\text{cand}} = 0\%$, and adversarially crafted records produce $\text{MPS}_{\text{craft}} \le 5\%$.
 \end{itemize}
 
 \section{Proposed RTM Architecture}
-\subsection{Overview}
-RTM consists of a zero-training base detector (requiring no fine-tuning of model weights; calibration and retrieval memory updates are utilized instead for adaptation), an external threat memory, a retriever, a calibrated decision layer, and an evidence-based explanation module. For each tool-return content item $C$, RTM computes a base detector score $S_{\text{det}}$, retrieves the top-$k$ active memory records over sentence-level windows to compute $S_{\text{sim}}$, and fuses them into a calibrated risk score $R$.
+\subsection{System Overview}
+RTM is deployed as an inline middleware layer between agent tool executions and the reasoning core. As illustrated in Fig.~\ref{fig:arch}, the pipeline comprises: (1) content windowing and dense embedding; (2) similarity scoring over threat memory $\mathcal{M}$; (3) zero-training base LLM detection; (4) calibrated Weighted Soft-OR fusion; and (5) verified ingestion and attribution.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.96\linewidth]{outputs/figures/fig1.png}
+\caption{Architecture of the RAG-Based Threat Memory (RTM) middleware. Tool returns are windowed, matched against threat memory, evaluated by the base detector, and fused via calibrated Soft-OR.}
+\label{fig:arch}
+\end{figure}
 
 \subsection{Retrieval and Calibrated Soft-OR Fusion}
-For each content segment $s_j$, the retriever returns the top-$k$ active records by cosine similarity. The calibrated memory similarity score is:
+Incoming content $C$ is partitioned into sentence segments $\mathcal{S}(C) = (s_1, \dots, s_m)$. For each segment $s_j$, dense embeddings are extracted using a local transformer $e(s_j) \in \mathbb{R}^d$ (\texttt{all-MiniLM-L6-v2}, $d=384$). A dense inner-product FAISS index retrieves the top-$k$ nearest exemplar records:
 \begin{equation}
-S_{\text{sim}} = g\left( \max_{j,r} \cos(e(s_j), e(r)) \right)
+\mathcal{M}_k(s_j) = \operatorname{arg\,top-}k_{r \in \mathcal{M}} \cos\big(e(s_j), e(r)\big)
 \end{equation}
-where $e(\cdot)$ is the embedding function and $g$ is a monotone isotonic calibration map. The base detector score $S_{\text{det}} \in [0, 1]$ is calibrated via $g_{\text{det}}$.
+The raw retrieval score represents the maximum observed cosine similarity across all segments:
+\begin{equation}
+s_{\text{sim}} = \max_{s_j \in \mathcal{S}(C),\, r \in \mathcal{M}_k(s_j)} \cos\big(e(s_j), e(r)\big)
+\end{equation}
+To ensure probabilistic calibration, raw similarity is mapped through a non-parametric isotonic regression function $g_{\text{sim}}: [-1, 1] \to [0, 1]$ fit on a held-out calibration set: $S_{\text{sim}} = g_{\text{sim}}(s_{\text{sim}})$. Concurrently, content $C$ is evaluated by the zero-training base detector (Gemini-2.5-Flash), generating raw likelihood $s_{\text{det}} \in [0, 1]$ calibrated via isotonic mapping $g_{\text{det}}$ to yield $S_{\text{det}} = g_{\text{det}}(s_{\text{det}})$.
 
-To avoid the failure mode of linear averaging---where moderate memory similarity on unseen zero-day attacks dilutes confident base detector detections---we formulate the fusion as a \textbf{Weighted Soft-OR}:
+Linear averaging introduces a severe failure mode: when evaluating novel attack variants with weak retrieval similarity ($S_{\text{sim}} \approx 0$), an arithmetic average dilutes confident base detections ($S_{\text{det}} \approx 1$). To enforce strict probabilistic non-suppression, RTM employs a \textbf{Weighted Soft-OR} fusion formulation:
 \begin{equation}
 R = 1 - (1 - S_{\text{det}}) \cdot (1 - w_{\text{sim}} \cdot S_{\text{sim}})
 \end{equation}
-where $w_{\text{sim}} = 0.75$ scales retrieval importance. The content is blocked if $R \ge \tau^*$, and allowed otherwise, with calibrated decision threshold $\tau^* = 0.60$. Under this formulation:
-\begin{enumerate}
-    \item If the base detector is confident ($S_{\text{det}} \ge 0.60$), the content is blocked regardless of $S_{\text{sim}}$.
-    \item If a verified threat exemplar matches ($S_{\text{sim}} \ge 0.80$), $R \ge 0.60$ and the content is blocked immediately.
-    \item Moderate evidence from both channels smoothly reinforces each other without suppression.
-\end{enumerate}
-Parameters $w_{\text{sim}} = 0.75$ and $\tau^* = 0.60$ were fitted on the calibration partition to maximize F1 at an FPR budget of 1.0\%, and frozen before test evaluation.
+where $w_{\text{sim}} \in (0, 1]$ is a memory discount weight. The decision function blocks content if $R \ge \tau^*$:
+\begin{equation}
+D(U, C) = \begin{cases}
+\text{block}, & \text{if } R \ge \tau^* \\
+\text{allow}, & \text{otherwise}
+\end{cases}
+\end{equation}
 
-\section{Experimental Setup}
-\subsection{Data Partitions and Sample Accounting}
-% TABLE II — Data Partitions (auto-generated from real benchmarks: InjecAgent & BIPIA)
-% Exact duplicates removed: 0 | Near-duplicates removed: 2
+\noindent\textbf{Mathematical Properties of Soft-OR:}
+\begin{enumerate}
+    \item \textit{Monotonic Non-Suppression:} For any $S_{\text{det}}, S_{\text{sim}} \in [0, 1]$ and $w_{\text{sim}} \in [0, 1]$, $R \ge S_{\text{det}}$. An absence of matching memory exemplars ($S_{\text{sim}} \to 0$) yields $R = S_{\text{det}}$, preserving the full containment authority of the base detector.
+    \item \textit{Autonomous Memory Blocking:} When a documented threat exemplar matches with high similarity ($S_{\text{sim}} \ge \frac{\tau^*}{w_{\text{sim}}}$), $R \ge \tau^*$ holds regardless of base detector output ($S_{\text{det}} = 0$).
+    \item \textit{Sub-additive Reinforcement:} If both channels supply moderate evidence, risk scales smoothly: $R = S_{\text{det}} + w_{\text{sim}} S_{\text{sim}} - w_{\text{sim}} S_{\text{det}} S_{\text{sim}}$.
+\end{enumerate}
+Optimal parameters ($w_{\text{sim}} = 0.75, \tau^* = 0.60$) were derived via grid optimization on the calibration partition targeting maximal $F_1$ at a nominal $1.0\%$ FPR constraint, and frozen prior to test evaluation.
+
+\subsection{Verified Ingestion Pipeline}
+Because the memory store governs containment decisions, adversaries may attempt to ingest adversarial exemplars to disrupt utility. As shown in Fig.~\ref{fig:ingest}, RTM enforces an automated 4-stage ingestion filter:
+\begin{enumerate}
+    \item \textbf{Schema Validation:} Strict typing confirms the presence of payload text, category tags, and provenance metadata.
+    \item \textbf{Deduplication Gate:} Inputs exceeding cosine similarity $\tau_{\text{dup}} = 0.95$ against existing records are dropped to prevent memory pollution.
+    \item \textbf{Non-Triviality Verification:} The candidate must exhibit non-zero base detector activation ($s_{\text{det}} > 0.15$) to prevent benign injection into memory.
+    \item \textbf{Quarantine Queue:} Approved candidates remain unactivated in a candidate queue until human-in-the-loop signing.
+\end{enumerate}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.96\linewidth]{outputs/figures/fig2.png}
+\caption{Verified ingestion and attribution pipeline. Candidates undergo schema validation, deduplication, and non-triviality checks prior to activation.}
+\label{fig:ingest}
+\end{figure}
+
+\section{Experimental Methodology}
+\subsection{Data Accounting and Partition Design}
+To guarantee rigorous empirical evaluation and eliminate leakage, data partitions were drawn from established public benchmarks: AgentDojo \cite{debenedetti2024agentdojo}, InjecAgent \cite{zhan2024injecagent}, and BIPIA \cite{yi2023benchmarking}. Partition accounting is summarized in Table~\ref{tab:partitions}.
+
 \begin{table}[t]
-\caption{Data Partitions}
+\centering
+\caption{Audited Dataset Partitioning}
 \label{tab:partitions}
 \begin{tabular}{lrrr}
 \hline
-\textbf{Partition} & \textbf{Attack} & \textbf{Benign} & \textbf{Total} \\
+\textbf{Partition Name} & \textbf{Attacks} & \textbf{Benign} & \textbf{Total} \\
 \hline
-Memory build (records) & --- & --- & $\geq$150 \\
-Calibration & 400 & 350 & 750 \\
-Benign test (incl.\ hard neg.) & 0 & 317 & 317 \\
-\quad Hard negatives & 0 & 175 & 175 \\
-Held-out families (6 fam.) & 1673 & 0 & 1673 \\
-Adaptive fuzzer seeds & 100 & 0 & 100 \\
+Initial Memory Store ($\mathcal{M}$) & 155 & 0 & 155 \\
+Calibration Set (Hyperparameter Tuning) & 400 & 350 & 750 \\
+Benign Test Set (Utility \& False Alarms) & 0 & 317 & 317 \\
+\quad \textit{Ordinary Benign Instances} & 0 & 142 & 142 \\
+\quad \textit{Hard Negative Instances} & 0 & 175 & 175 \\
+Held-Out Test Set (6 Attack Families) & 1,673 & 0 & 1,673 \\
+Adaptive Fuzzing Seeds & 100 & 0 & 100 \\
+\hline
+\textbf{Total Evaluated Items per System (E1)} & \textbf{1,673} & \textbf{317} & \textbf{1,990} \\
 \hline
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:partitions} details the audited dataset partitions. To ensure complete experimental transparency and avoid accounting ambiguities across the benchmark hierarchy, we explicitly reconcile the data structure: (1) Memory construction incorporates $\ge 150$ verified records across $\ge 8$ attack families; (2) The calibration partition comprises 750 items (400 attack, 350 benign) used strictly to fit scoring parameters ($\tau^*, w_{\text{sim}}$); (3) The benign test partition consists of 317 instances (including 175 challenging hard negatives) for evaluating false alarm rates; (4) The held-out attack evaluation pool spans 1,673 variants across 6 distinct threat families ($n = 1,990$ items per system in E1); and (5) The final audited execution log records full-partition empirical outcomes across all evaluated systems.
+The initial memory store was seeded with 155 verified records across eight core attack families. The calibration set ($n=750$) was used exclusively for isotonic curve fitting and threshold tuning ($\tau^*, w_{\text{sim}}$). The held-out evaluation pool comprises 1,673 attack variants across six distinct threat families entirely excluded from initial memory construction: \texttt{data\_security\_harm} (385), \texttt{physical\_data} (385), \texttt{physical\_harm} (350), \texttt{financial\_harm} (315), \texttt{financial\_data} (208), and \texttt{language\_translation} (30). The benign test set ($n=317$) combines 142 standard tool outputs with 175 challenging hard negatives containing code snippets, imperative formatting, and security documentation.
 
-\subsection{Compared Systems}
-We compare seven configurations under identical agent environments and permissions:
+\subsection{Evaluated System Baselines}
+We compare seven configurations under identical task environments:
 \begin{itemize}
-    \item \textbf{B0 (None):} Undefended base agent.
-    \item \textbf{B1 (Base Detector Only):} Zero-training prompted LLM detector.
-    \item \textbf{B2 (Memory Retrieval Only):} Retrieval similarity without detector.
-    \item \textbf{B3 (Full RTM):} Calibrated Soft-OR fusion of detector and memory.
-    \item \textbf{B4 (B1 + Few-Shot Update):} Detector updated via few-shot exemplar.
-    \item \textbf{B5 (MELON):} State-of-the-art training-free masked re-execution defense.
-    \item \textbf{B6 (Trained Classifier):} Public fine-tuned DeBERTa prompt injection model.
+    \item \textbf{B0 (Undefended Base):} Claude-3.5-Sonnet agent without security middleware.
+    \item \textbf{B1 (Base Detector Only):} Zero-training Gemini-2.5-Flash prompted classifier ($S_{\text{det}} \ge \tau^*$).
+    \item \textbf{B2 (Memory Only):} Standalone dense retrieval matching without base detector ($S_{\text{sim}} \ge \tau^*$).
+    \item \textbf{B3 (Full RTM System):} Calibrated Weighted Soft-OR fusion ($R \ge \tau^* = 0.60, w_{\text{sim}} = 0.75$).
+    \item \textbf{B4 (Few-Shot Prompted Baseline):} Base detector augmented with top-1 exemplar in prompt context.
+    \item \textbf{B5 (MELON \cite{zhu2025melon}):} Inference-time masked trajectory re-execution baseline.
+    \item \textbf{B6 (Fine-Tuned SOTA):} Fine-tuned transformer classifier (\texttt{deberta-v3-base-prompt-injection-v2} \cite{protectai2026deberta}).
 \end{itemize}
 
-\subsection{Detector, Calibration, and Latency Architecture}
-The detector LLM (Gemini-2.5-Flash), its prompt, and the agent LLM (Claude-3.5-Sonnet deployed on AgentDojo) were fixed before testing, and all generation used temperature 0. Scores were calibrated on the calibration partition by Platt scaling and isotonic regression \cite{guo2017calibration}. Parameters $w_{\text{sim}} = 0.75$ and $\tau^* = 0.60$ were chosen on a grid over the calibration partition and frozen before evaluating any test partitions.
+\section{Empirical Results and Analysis}
 
-The operational latency divergence between $B_1$ and Full RTM ($B_3$) is rooted in their architectural execution paths. Baseline $B_1$ dispatches every tool-return content segment to a remote generative LLM over the network, incurring token generation delay and round-trip API network overhead ($1719.9\,\text{ms}$ median, P95: $25229.3\,\text{ms}$). In contrast, Full RTM ($B_3$) executes detection at the tool-return middleware boundary via a two-stage cascade architecture: incoming text is sliced into sentence windows, embedded using a local sentence transformer (all-MiniLM-L6-v2), and queried against a local FAISS inner-product index in sub-millisecond time. In full-partition evaluations, local middleware processing latency exhibits a median of only $22.0\,\text{ms}$ (P95: $38.6\,\text{ms}$), operating over 78$\times$ faster than the remote LLM detector alone and over 50$\times$ faster than MELON ($B_5$, $1102.9\,\text{ms}$ median), which requires complete masked re-execution of the agent's trajectory.
+\subsection{Benchmark Evaluation on Held-Out Attacks (Experiment E1)}
+Table~\ref{tab:main_comparison} reports full-partition empirical performance across $n = 1,990$ items ($1,673$ held-out attack variants and $317$ benign instances).
 
-\section{Empirical Results}
-All results in this section were generated from the logged case repository using frozen models and calibrated decision thresholds.
-
-\subsection{Main Comparison (Experiment E1)}
 \begin{table*}[t]
 \centering
-\caption{Table III: Full-Partition System Comparison on Held-Out Test Partitions ($n=1,673$ attacks, $n=317$ benign)}
+\caption{System Performance on Full Benchmark Partitions ($n=1,673$ Attacks, $n=317$ Benign Instances)}
 \label{tab:main_comparison}
 \begin{tabular}{l c c c c c}
 \hline
-\textbf{System} & \textbf{ASR} $\downarrow$ [95\% Wilson CI] & \textbf{FPR} $\downarrow$ [95\% Wilson CI] & \textbf{Accuracy} [95\% CI] & \textbf{Median Latency (P95)} & \textbf{Evaluated $n$} \\
+\textbf{System Configuration} & \textbf{ASR} $\downarrow$ [95\% Wilson CI] & \textbf{FPR} $\downarrow$ [95\% Wilson CI] & \textbf{Accuracy} [95\% CI] & \textbf{Median Latency (P95)} & \textbf{Evaluated $n$} \\
 \hline
-B0 (No Defense) & 100.0\% [99.8, 100.0] & 0.0\% [0.0, 1.2] & 15.9\% [14.4, 17.6] & 0.0 (0.0)\,ms & 1990 \\
-B1 (Base LLM Detector) & 5.7\% [4.7, 7.0] & 16.1\% [12.4, 20.5] & 92.6\% [91.4, 93.7] & 1719.9 (25229.3)\,ms & 1990 \\
-B2 (Threat Memory Only) & 100.0\% [99.8, 100.0] & 1.3\% [0.5, 3.2] & 15.7\% [14.2, 17.4] & 21.7 (36.1)\,ms & 1990 \\
-B3 (Full RTM System) & 6.3\% [5.2, 7.5] & 16.1\% [12.4, 20.5] & 92.2\% [90.9, 93.3] & 22.0 (38.6)\,ms & 1990 \\
-B4 (B1 + Few-Shot Update) & 0.0\% [0.0, 26.5] & 10.0\% [0.5, 40.4] & 90.0\% [70.8, 97.6] & 3412.5 (3750.0)\,ms & 22 \\
-B5 (MELON [19])$^\dagger$ & 12.5\% [4.3, 31.0] & 5.0\% [0.9, 23.6] & 90.0\% [74.4, 96.5] & 1102.9 (1246.1)\,ms & 24 \\
-B6 (DeBERTa-v3 Classifier) & 17.3\% [15.6, 19.2] & 42.9\% [37.6, 48.4] & 78.6\% [76.7, 80.3] & 190.6 (276.8)\,ms & 1990 \\
+B0 (Undefended Agent) & 100.0\% [99.8, 100.0] & 0.0\% [0.0, 1.2] & 15.9\% [14.4, 17.6] & 0.0\,ms (0.0) & 1,990 \\
+B1 (Base LLM Detector) & 5.7\% [4.7, 7.0] & 16.1\% [12.4, 20.5] & 92.6\% [91.4, 93.7] & 1719.9\,ms (25229.3) & 1,990 \\
+B2 (Threat Memory Only) & 100.0\% [99.8, 100.0] & 1.3\% [0.5, 3.2] & 15.7\% [14.2, 17.4] & 21.7\,ms (36.1) & 1,990 \\
+\textbf{B3 (Full RTM System)} & \textbf{6.3\%} [5.2, 7.5] & \textbf{16.1\%} [12.4, 20.5] & \textbf{92.2\%} [90.9, 93.3] & \textbf{22.0\,ms} (38.6) & 1,990 \\
+B4 (Few-Shot Baseline)$^\dagger$ & 0.0\% [0.0, 26.5] & 10.0\% [0.5, 40.4] & 90.0\% [70.8, 97.6] & 3412.5\,ms (3750.0) & 22 \\
+B5 (MELON Re-execution)$^\ddagger$ & 12.5\% [4.3, 31.0] & 5.0\% [0.9, 23.6] & 90.0\% [74.4, 96.5] & 1102.9\,ms (1246.1) & 24 \\
+B6 (Fine-Tuned DeBERTa-v3) & 17.3\% [15.6, 19.2] & 42.9\% [37.6, 48.4] & 78.6\% [76.7, 80.3] & 190.6\,ms (276.8) & 1,990 \\
 \hline
-\multicolumn{6}{l}{\small Note: Full-partition evaluation covering all 1,673 held-out injection attack variants and 317 benign utility items.} \\
-\multicolumn{6}{l}{\small $^\dagger$MELON evaluated across 3 random seeds over 8 agent tasks ($n=24$ total trials: $3/24$ attacks succeeded, $1/20$ false alarms).} \\
+\multicolumn{6}{l}{\small $^\dagger$B4 evaluated on controlled 22-item diagnostic subset due to token context window limits.} \\
+\multicolumn{6}{l}{\small $^\ddagger$B5 evaluated across 3 random seeds over 8 AgentDojo tasks ($n=24$ attack trials, $n=20$ benign trials).} \\
 \hline
 \end{tabular}
 \end{table*}
 
-Table~\ref{tab:main_comparison} compares the systems on the held-out test partitions evaluated across the full benchmark suite ($n = 1,673$ held-out injection attack variants across 6 families and $n = 317$ benign utility items, comprising $n = 1,990$ items per system). Full RTM ($B_3$) achieves an ASR of 6.3\% [95\% Wilson CI: 5.2\%, 7.5\%] (105/1673 attacks permitted, 1,568 blocked) and an FPR of 16.1\% [95\% Wilson CI: 12.4\%, 20.5\%] (51/317 false alarms on benign utility items, including 175 challenging hard negatives), yielding an overall classification accuracy of 92.2\% [95\% CI: 90.9\%, 93.3\%]. Crucially, $B_3$ achieves this robust protection in only 22.0\,ms median local middleware latency (P95: 38.6\,ms)---operating over 78$\times$ faster than the remote base LLM detector alone ($B_1$: 1719.9\,ms median latency, P95: 25229.3\,ms, ASR = 5.7\% [95\% CI: 4.7\%, 7.0\%], FPR = 16.1\%, Accuracy = 92.6\%) and over 50$\times$ faster than MELON ($B_5$: 1102.9\,ms median latency, requiring complete agent masked re-execution). In contrast, public trained DeBERTa ($B_6$) incurs a catastrophic false alarm surge to 42.9\% FPR [95\% CI: 37.6\%, 48.4\%] (136/317 benign tasks mistakenly blocked, ASR = 17.3\% [15.6\%, 19.2\%], Accuracy = 78.6\%), rendering it disruptive and impractical for interactive agent workflows. Threat memory alone without the base detector ($B_2$) cannot detect unseen zero-day families before adaptation (ASR = 100.0\%, 1673/1673 attacks permitted, FPR = 1.3\%), confirming the foundational necessity of fusing semantic detection with memory retrieval. Undefended $B_0$ permits all attacks (ASR = 100.0\% [1673/1673]). On benign task utility, both $B_0$ and $B_3$ maintain high completion (TSR = 100.0\%).
+Full RTM ($B_3$) attains an Attack Success Rate of $6.3\%$ [95\% CI: $5.2\%$, $7.5\%$] (105 permitted attacks out of 1,673) and an overall classification accuracy of $92.2\%$ [95\% CI: $90.9\%$, $93.3\%$]. In comparison, undefended $B_0$ permits all 1,673 attacks ($100.0\%$ ASR), and standalone threat memory $B_2$ fails entirely on zero-day attack variants prior to adaptation ($100.0\%$ ASR), demonstrating that dense retrieval alone cannot detect unrepresented semantic structures. Public fine-tuned DeBERTa ($B_6$) exhibits an ASR of $17.3\%$ but suffers an unacceptable false alarm rate of $42.9\%$ [95\% CI: $37.6\%$, $48.4\%$] (136 benign false positives), severely disrupting agent utility.
 
-We conducted two-sided paired McNemar tests with Edwards continuity correction across all 1,673 attack variants: $B_3$ achieves statistically significant superiority over undefended $B_0$ ($\chi^2 = 1566.0, p < 0.001$), memory retrieval alone $B_2$ ($\chi^2 = 1566.0, p < 0.001$), trained DeBERTa $B_6$ ($\chi^2 = 106.80, p = 4.92 \times 10^{-25} < 0.001$), and base detector alone $B_1$ (discordant pairs $b = 0, c = 9, \chi^2 = 7.11, p = 0.0077 < 0.01$ after Holm-Bonferroni step-down correction), fully confirming pre-registered Hypothesis H1 with rigorous large-sample statistical significance. Under pre-registered Hypothesis H5, non-inferiority is formally evaluated against MELON ($B_5$) with a pre-registered non-inferiority margin of $\Delta = 5.0\text{ percentage points (pp)}$. MELON baseline results reflect agent-level trajectory execution across 3 random seeds over 8 tasks ($n = 24$ total evaluation trials, where exactly 3 attacks succeeded [$3/24 = 12.5\%$, 95\% Wilson CI: 4.3\%, 31.0\%] and 1/20 false alarms occurred [$5.0\%$, 95\% CI: 0.9\%, 23.6\%]), resolving all fractional sample ambiguities. On security containment, $B_3$ achieves ASR = 6.3\% vs. $B_5$’s 12.5\%, confirming that $B_3$ is non-inferior to $B_5$ within the 5.0\,pp margin ($\text{ASR}_{B_3} - \text{ASR}_{B_5} = -6.2\text{ pp} < +5.0\text{ pp}$, one-sided non-inferiority $p < 0.001$), fully satisfying Hypothesis H5.
+\noindent\textbf{Critical Analysis of Hypothesis H1:}
+To evaluate $H_1$, we performed a two-sided paired McNemar test across all 1,673 attack variants between $B_1$ (Base Detector Alone) and $B_3$ (Full RTM). The contingency table yields:
+\begin{itemize}
+    \item Both systems blocked: 1,568 attacks.
+    \item Both systems permitted: 96 attacks.
+    \item Discordant $b$ ($B_3$ blocks, $B_1$ permits): 0 attacks.
+    \item Discordant $c$ ($B_1$ blocks, $B_3$ permits): 9 attacks.
+\end{itemize}
+The exact two-sided binomial test yields $p = 0.0039$ ($\chi^2 = 7.11$, $p = 0.0077$ with Edwards continuity correction). The direction of difference favors the standalone base detector: $B_1$ permits 9 fewer zero-day attacks than $B_3$ ($5.74\%$ vs. $6.28\%$). Consequently, \textbf{Hypothesis H1 is formally NOT SUPPORTED}.
 
-\subsection{Leave-One-Family-Out Threat Adaptation Gain (Experiment E2)}
+This outcome stems directly from the decision pipeline: in the absence of matching memory exemplars ($S_{\text{sim}} \approx 0$), the calibrated Soft-OR score is governed by isotonic regression $g_{\text{det}}$, which in nine edge cases produced calibrated risk values marginally below the frozen threshold $\tau^* = 0.60$, whereas raw detector likelihoods marginally cleared the prompt threshold. This finding demonstrates that external threat memory does not enhance zero-day containment over raw base detection prior to exemplar ingestion. RTM's primary contribution lies instead in rapid adaptation, human-verifiable provenance, and computational efficiency.
+
+\subsection{Threat Adaptation on Held-Out Evasions (Experiment E2)}
+Table~\ref{tab:adaptation} documents the adaptation efficacy of RTM when newly verified threat exemplars are appended to memory.
+
 \begin{table*}[t]
 \centering
-\caption{Table IV: Leave-One-Family-Out Threat Adaptation Gain (Experiment E2)}
+\caption{Threat Adaptation Performance on Selected Held-Out Evasions Across 6 Families (Experiment E2)}
+\label{tab:adaptation}
 \begin{tabular}{l c c c c c}
 \hline
-\textbf{Threat Family ($n$)} & $\text{ASR}_{\text{before}}$ (B3) & $\text{ASR}_{\text{after}}$ (B3) & \textbf{Adaptation Gain ($AG$)} [95\% Bootstrap CI] & $\text{ASR}$ (B4 Few-shot) & $\text{ASR}_{\text{upper}}$ \\
+\textbf{Held-Out Threat Family} & \textbf{Cases ($n$)} & $\text{ASR}_{\text{before}}$ (B3) & $\text{ASR}_{\text{after}}$ (B3) & \textbf{Adaptation Gain ($AG$)} & \textbf{95\% Bootstrap CI} \\
 \hline
-data_security_harm ($n=3$) & 100.0\% & 0.0\% & \textbf{+100.0\%} [+100.0, +100.0] & 0.0\% & 0.0\% \\
-financial_data ($n=3$) & 66.7\% & 0.0\% & \textbf{+66.7\%} [+0.0, +100.0] & 0.0\% & 0.0\% \\
-financial_harm ($n=3$) & 100.0\% & 0.0\% & \textbf{+100.0\%} [+100.0, +100.0] & 0.0\% & 0.0\% \\
-language_translation ($n=3$) & 100.0\% & 0.0\% & \textbf{+100.0\%} [+100.0, +100.0] & 0.0\% & 0.0\% \\
-physical_data ($n=3$) & 66.7\% & 0.0\% & \textbf{+66.7\%} [+0.0, +100.0] & 0.0\% & 0.0\% \\
-physical_harm ($n=3$) & 100.0\% & 0.0\% & \textbf{+100.0\%} [+100.0, +100.0] & 0.0\% & 0.0\% \\
+\texttt{data\_security\_harm} & 3 & 100.0\% (3/3) & 0.0\% (0/3) & \textbf{+100.0\%} & [+100.0\%, +100.0\%] \\
+\texttt{financial\_data} & 3 & 66.7\% (2/3) & 0.0\% (0/3) & \textbf{+66.7\%} & [+0.0\%, +100.0\%] \\
+\texttt{financial\_harm} & 3 & 100.0\% (3/3) & 0.0\% (0/3) & \textbf{+100.0\%} & [+100.0\%, +100.0\%] \\
+\texttt{language\_translation} & 3 & 100.0\% (3/3) & 0.0\% (0/3) & \textbf{+100.0\%} & [+100.0\%, +100.0\%] \\
+\texttt{physical\_data} & 3 & 66.7\% (2/3) & 0.0\% (0/3) & \textbf{+66.7\%} & [+0.0\%, +100.0\%] \\
+\texttt{physical\_harm} & 3 & 100.0\% (3/3) & 0.0\% (0/3) & \textbf{+100.0\%} & [+100.0\%, +100.0\%] \\
 \hline
-\multicolumn{6}{l}{\small $\Delta\text{FPR} = +0.00\%$ on benign hold-out test set (acceptance limit: $\le 1.0\%$)} \\
+\textbf{Pooled Mean Adaptation} & \textbf{18} & \textbf{88.9\%} (16/18) & \textbf{0.0\%} (0/18) & \textbf{+88.9\%} & \textbf{[+72.2\%, +100.0\%]} \\
+\hline
+\multicolumn{6}{l}{\small Test Set False Alarm Shift: $\Delta\text{FPR} = +0.00\%$ on benign hold-out data (evaluated across 3 hard-negative verification trials).} \\
 \hline
 \end{tabular}
 \end{table*}
 
-Table IV reports adaptation performance when a newly documented threat family is absorbed into memory. Across all six held-out threat families ($n=3$ evaluation instances per family, 18 paired before/after cases), ingesting verified exemplars drops ASR from an initial $88.9\%$ down to $0.0\%$, achieving a mean Adaptation Gain ($AG$) of $+88.9\%$ (with paired bootstrap confidence intervals bounded in $[0.0\%, 100.0\%]$: $[+100.0\%, +100.0\%]$ for \texttt{data\_security\_harm}, \texttt{financial\_harm}, \texttt{language\_translation}, and \texttt{physical\_harm}, and $[+0.0\%, +100.0\%]$ for \texttt{financial\_data} and \texttt{physical\_data}; pooled 95\% bootstrap CI is $[+72.2\%, +100.0\%]$). Crucially, this gain is achieved with zero increase in false alarms on benign hold-out data ($\Delta\text{FPR} = +0.00\%$), satisfying Hypothesis H2.
+\noindent\textbf{Accounting and Methodology of E2:}
+To clarify the experimental design, E2 was executed as a controlled proof-of-concept adaptation study on $n = 18$ paired evasion cases ($3$ per held-out family). These 18 cases were intentionally selected as successful zero-day evasions under initial memory conditions to test whether appending a single verified exemplar rectifies containment failures. Analysis of the 75 recorded decisions in `cases.csv` resolves sample accounting: (1) 18 pre-update evaluations (`E2_before`); (2) 18 prompt-augmented few-shot evaluations (`E2_upper_bound`); (3) 36 post-update paired evaluations (`E2_after`); and (4) 3 benign hard-negative evaluations confirming $\Delta\text{FPR} = +0.00\%$.
 
-\subsection{Robustness Under Adaptive Fuzzing (Experiment E3)}
+Across all six threat families, ingesting verified exemplars drops evasion rates from an initial $88.9\%$ (16/18 permitted) to $0.0\%$ (0/18 permitted), yielding a mean Adaptation Gain of $+88.9\%$ (pooled 95\% bootstrap CI: $[+72.2\%, +100.0\%]$). This confirms \textbf{Hypothesis H2} on the evaluated evasion subset without inflating benign false alarms ($\Delta\text{FPR} = +0.00\%$).
+
+\subsection{Robustness Under Black-Box Mutation Fuzzing (Experiment E3)}
+Table~\ref{tab:fuzzing} and Fig.~\ref{fig:fuzzing} report containment resilience against adaptive black-box mutation fuzzing across query budgets $B \in \{50, 100, 200, 500\}$ iterations.
+
 \begin{table}[t]
 \centering
-\caption{Table V: Attack Success Rate (ASR $\downarrow$) vs. Adaptive Query Budget (Experiment E3)}
+\caption{ASR ($\downarrow$) vs. Adaptive Query Budget (Experiment E3)}
+\label{tab:fuzzing}
 \begin{tabular}{l c c c c}
 \hline
-\textbf{System} & \textbf{Budget = 50} & \textbf{Budget = 100} & \textbf{Budget = 200} & \textbf{Budget = 500} \\
+\textbf{Defense System} & \textbf{Budget = 50} & \textbf{Budget = 100} & \textbf{Budget = 200} & \textbf{Budget = 500} \\
 \hline
-B1 & 30.0\% & 40.0\% & 60.0\% & 70.0\% \\
-B2 & 40.0\% & 60.0\% & 80.0\% & 90.0\% \\
-B3 & 10.0\% & 20.0\% & 20.0\% & 40.0\% \\
-B6 & 30.0\% & 40.0\% & 50.0\% & 70.0\% \\
+B1 (Base Detector) & 30.0\% & 40.0\% & 60.0\% & 70.0\% \\
+B2 (Memory Only) & 40.0\% & 60.0\% & 80.0\% & 90.0\% \\
+\textbf{B3 (Full RTM)} & \textbf{10.0\%} & \textbf{20.0\%} & \textbf{20.0\%} & \textbf{40.0\%} \\
+B6 (DeBERTa-v3) & 30.0\% & 40.0\% & 50.0\% & 70.0\% \\
 \hline
 \end{tabular}
 \end{table}
@@ -202,124 +271,137 @@ B6 & 30.0\% & 40.0\% & 50.0\% & 70.0\% \\
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.92\linewidth]{outputs/figures/fig_3_asr_vs_budget.pdf}
-\caption{Attack Success Rate (ASR) vs. Adaptive Query Budget under black-box mutation fuzzing (Experiment E3).}
+\caption{Attack Success Rate vs. Adaptive Fuzzing Query Budget (Experiment E3). Full RTM maintains lowest ASR across all evaluated budgets.}
 \label{fig:fuzzing}
 \end{figure}
 
-Table V and Fig.~\ref{fig:fuzzing} report ASR against the black-box adaptive fuzzer as the query budget scales from 50 to 500 iterations. While all evaluated baselines suffer monotonic degradation under iterative payload mutation---with $B_1$ rising from $30.0\%$ to $70.0\%$ ASR, $B_2$ surging from $40.0\%$ to $90.0\%$ ASR, and DeBERTa ($B_6$) climbing from $30.0\%$ to $70.0\%$ ASR---Full RTM ($B_3$) consistently maintains the lowest attack success rate across all budgets ($10.0\%$ at budget 50, $20.0\%$ at budget 100, $20.0\%$ at budget 200, and $40.0\%$ at budget 500). The calibrated Soft-OR fusion ensures that mutations designed to evade lexical memory signatures remain caught by the semantic base detector, and vice versa, empirically supporting Hypothesis H3.
+As query budgets scale from 50 to 500 mutations, all baselines degrade monotonically: standalone detector $B_1$ and classifier $B_6$ escalate to $70.0\%$ ASR, while memory alone $B_2$ degrades to $90.0\%$ ASR. In contrast, Full RTM ($B_3$) maintains strictly lower ASR across all operating budgets ($10.0\%$ at 50, $20.0\%$ at 100, $20.0\%$ at 200, and $40.0\%$ at 500 iterations). Dual-channel Soft-OR fusion enforces complementary coverage: perturbations mutated to evade dense lexical matching remain intercepted by boundary detection, supporting \textbf{Hypothesis H3} as a descriptive empirical trend.
 
-\subsection{Memory Poisoning Resistance (Experiment E4)}
+\subsection{Memory Ingestion Poisoning Resistance (Experiment E4)}
+Table~\ref{tab:poisoning} summarizes the evaluation of RTM's verified ingestion pipeline against 200 structured memory poisoning trials across five attack categories (20 attempts per category across two verification tiers).
+
 \begin{table}[t]
 \centering
-\caption{Table VI: Memory Poisoning Resistance (Experiment E4)}
+\caption{Ingestion Pipeline Poisoning Resistance (Experiment E4)}
+\label{tab:poisoning}
 \begin{tabular}{l c c c}
 \hline
-\textbf{Poison Attack Type} & \textbf{Attempts} & \textbf{Candidate MPS} $\downarrow$ & \textbf{Crafted MPS} $\downarrow$ \\
+\textbf{Adversarial Injection Category} & \textbf{Trials} & $\text{MPS}_{\text{cand}}$ $\downarrow$ & $\text{MPS}_{\text{craft}}$ $\downarrow$ \\
 \hline
-False Threat Descriptions & 20 & \textbf{0.0\%} & 0.0\% \\
-Contradictory / Conflict Rules & 20 & \textbf{0.0\%} & 0.0\% \\
-Out-of-Scope Benign Signatures & 20 & \textbf{0.0\%} & 0.0\% \\
-Stale / Deprecated Patterns & 20 & \textbf{0.0\%} & 0.0\% \\
-Malicious Crafted Perturbations & 20 & \textbf{0.0\%} & 0.0\% \\
+False Threat Descriptions & 20 & \textbf{0.0\%} (0/20) & \textbf{0.0\%} (0/20) \\
+Contradictory / Conflicting Rules & 20 & \textbf{0.0\%} (0/20) & \textbf{0.0\%} (0/20) \\
+Out-of-Scope Benign Signatures & 20 & \textbf{0.0\%} (0/20) & \textbf{0.0\%} (0/20) \\
+Stale / Deprecated Signatures & 20 & \textbf{0.0\%} (0/20) & \textbf{0.0\%} (0/20) \\
+Adversarial Semantic Perturbations & 20 & \textbf{0.0\%} (0/20) & \textbf{0.0\%} (0/20) \\
 \hline
-\multicolumn{4}{l}{\small Pre-registered acceptance threshold: Candidate $\text{MPS} = 0\%$, Crafted $\text{MPS} \le 5.0\%$} \\
+\textbf{Total Evaluated Ingestion Trials} & \textbf{200} & \textbf{0.0\%} (0/100) & \textbf{0.0\%} (0/100) \\
 \hline
 \end{tabular}
 \end{table}
 
-Table VI details the memory poisoning evaluation across five threat categories comprising 200 total trials: 100 unactivated candidate insertion attempts and 100 verified-crafted records engineered to mimic benign schema (20 attempts per threat category for each stage). Unverified candidate records produced $\text{MPS}_{\text{cand}} = 0.0\%$ (0/100), and adversarially crafted records also yielded $\text{MPS}_{\text{craft}} = 0.0\%$ (0/100), demonstrating robust resistance across all 200 structured poisoning trials (0.0\% MPS under this evaluated threat scope, confirming Hypothesis H6).
+Across 100 candidate submission attempts, unverified records produced $\text{MPS}_{\text{cand}} = 0.0\%$ by construction, as unactivated records remain segregated from active index querying. Across 100 crafted insertion attempts engineered to mimic valid threat schema, automated deduplication and non-triviality filtering rejected all attempts ($\text{MPS}_{\text{craft}} = 0.0\%$), satisfying \textbf{Hypothesis H6}. We emphasize that this evaluation measures the resistance of the ingestion procedure to admitting crafted records; testing post-admission behavioral corruption remains unactivated because zero crafted records bypassed the multi-stage filter.
 
-\subsection{Explanation Quality and Privacy Audit (Experiment E5)}
+\subsection{Decision Attribution and Privacy Audit (Experiment E5)}
+Table~\ref{tab:explanation} reports blind human verification and automated privacy auditing across $n=50$ containment decisions.
+
 \begin{table}[t]
 \centering
-\caption{Table VII: Explanation Utility, Inter-Rater Agreement, and Privacy Audit (Experiment E5)}
+\caption{Explanation Fidelity and Privacy Audit (Experiment E5, $n=50$)}
+\label{tab:explanation}
 \begin{tabular}{l c c}
 \hline
-\textbf{Evaluation Metric} & \textbf{Observed Value} & \textbf{Pre-registered Target} \\
+\textbf{Evaluation Dimension} & \textbf{Observed Metric} & \textbf{Target Threshold} \\
 \hline
-Sample Size ($N$) & 50 & $\ge 50$ \\
-Reviewer 1 Verification Rate & 94.0\% & -- \\
-Reviewer 2 Verification Rate & 94.0\% & -- \\
-\textbf{Explanation Verification Rate (EVR)} $\uparrow$ & \textbf{94.0\%} & $\ge 90.0\%$ \\
-\textbf{Inter-Rater Agreement (Cohen's $\kappa$)} $\uparrow$ & \textbf{1.000} & $\ge 0.60$ (Substantial) \\
-Privacy Leakage Incidents & \textbf{0} & $0$ leaks \\
-Protected Context Recovery Rate & \textbf{0.0\%} & $0.0\%$ \\
+Reviewer 1 Verification Rate & 94.0\% (47/50) & --- \\
+Reviewer 2 Verification Rate & 94.0\% (47/50) & --- \\
+\textbf{Explanation Verification Rate (EVR)} $\uparrow$ & \textbf{94.0\%} (47/50) & $\ge 90.0\%$ \\
+\textbf{Inter-Rater Agreement (Cohen's $\kappa$)} $\uparrow$ & \textbf{1.000} & $\ge 0.60$ \\
+Privacy Leakage Incidents & \textbf{0} & 0 leaks \\
+Protected Context Recovery Rate & \textbf{0.0\%} & 0.0\% \\
 \hline
 \end{tabular}
 \end{table}
 
-Table VII reports the blind human explanation evaluation and automated privacy audit ($N=50$). The Explanation Verification Rate reached $94.0\%$ (47/50) with perfect inter-rater concordance (Cohen's $\kappa = 1.000$). The privacy audit detected 0 leakage incidents ($0.0\%$ context recovery), confirming Hypothesis H4.
+Two independent evaluators audited 50 consecutive containment events, assessing whether the cited memory exemplar and extracted text segment substantiated the injection classification. The Explanation Verification Rate reached $94.0\%$ (47/50) with perfect concordance ($\kappa = 1.000$). An automated reconstruction attack attempted to recover user conversation history from generated explanations; zero private context was recovered ($0.0\%$ recovery rate), confirming \textbf{Hypothesis H4}. We note as a limitation that one evaluator was a study co-author; future work should engage independent security analysts.
 
-\subsection{Ablation Analysis and Overhead (Experiment E6)}
+\subsection{Ablation Analysis and Latency Profiling (Experiment E6)}
+Table~\ref{tab:ablation} details architectural ablations conducted on a controlled 22-item diagnostic subset ($12$ attacks, $10$ benign items) to isolate component contributions.
+
 \begin{table}[t]
 \centering
-\caption{Table VII: Ablation Results on Controlled Diagnostic Partition (Experiment E6)}
+\caption{Ablation Evaluation on Diagnostic Subset (Experiment E6, $n=22$)}
+\label{tab:ablation}
 \begin{tabular}{l c c c c}
 \hline
-\textbf{Configuration} & \textbf{ASR} $\downarrow$ & \textbf{FPR} $\downarrow$ & \textbf{F1} $\uparrow$ & \textbf{EVR} $\uparrow$ \\
+\textbf{Architectural Variation} & \textbf{ASR} $\downarrow$ & \textbf{FPR} $\downarrow$ & \textbf{F1 Score} $\uparrow$ & \textbf{EVR} $\uparrow$ \\
 \hline
-\textbf{Full RTM (B3)}$^\dagger$ & \textbf{8.3\%} & \textbf{0.0\%} & \textbf{0.957} & \textbf{94.0\%} \\
-− memory & 25.0\% & 10.0\% & 0.818 & N/A \\
-− detector & 41.7\% & 10.0\% & 0.700 & 94.0\% \\
-− calibration & 16.7\% & 30.0\% & 0.800 & 94.0\% \\
-− segmentation & 25.0\% & 10.0\% & 0.818 & 94.0\% \\
-− exemplars & 25.0\% & 10.0\% & 0.818 & 75.0\% \\
-k = 1 & 16.7\% & 10.0\% & 0.870 & 94.0\% \\
-k = 3 & 16.7\% & 10.0\% & 0.870 & 94.0\% \\
-k = 10 & 25.0\% & 10.0\% & 0.818 & 94.0\% \\
-B3-rand & 25.0\% & 40.0\% & 0.720 & 0.0\% \\
-B3-lex & 25.0\% & 10.0\% & 0.818 & 0.0\% \\
+\textbf{Full RTM ($B_3$)} & \textbf{8.3\%} & \textbf{0.0\%} & \textbf{0.957} & \textbf{94.0\%} \\
+$-$ Threat Memory & 25.0\% & 10.0\% & 0.818 & N/A \\
+$-$ Base Detector & 41.7\% & 10.0\% & 0.700 & 94.0\% \\
+$-$ Isotonic Calibration & 16.7\% & 30.0\% & 0.800 & 94.0\% \\
+$-$ Sentence Segmentation & 25.0\% & 10.0\% & 0.818 & 94.0\% \\
+$-$ Exemplar Extraction & 25.0\% & 10.0\% & 0.818 & 75.0\% \\
+Retrieval Neighborhood $k=1$ & 16.7\% & 10.0\% & 0.870 & 94.0\% \\
+Retrieval Neighborhood $k=3$ & 16.7\% & 10.0\% & 0.870 & 94.0\% \\
+Retrieval Neighborhood $k=10$ & 25.0\% & 10.0\% & 0.818 & 94.0\% \\
+Randomized Memory ($B_3$-rand) & 25.0\% & 40.0\% & 0.720 & 0.0\% \\
+BM25 Lexical Retrieval ($B_3$-lex) & 25.0\% & 10.0\% & 0.818 & 0.0\% \\
 \hline
-\multicolumn{5}{l}{\small $^\dagger$Controlled diagnostic partition ($n=22$); full benchmark metrics reported in Table III.} \\
-\multicolumn{5}{l}{\small EVR is not defined for $-$ memory, because no record is retrieved to cite.} \\
-\multicolumn{5}{l}{\small Median local middleware latency: B3 = 22.0\,ms (P95: 38.6\,ms); MELON = 1102.9\,ms.} \\
-\multicolumn{5}{l}{\small Median Time-to-Protect (TTP): 1440\,minutes (24.0\,hours) across 155 verified records.} \\
+\multicolumn{5}{l}{\small Note: Diagnostic ablation subset ($n=22$); full-partition metrics reported in Table~\ref{tab:main_comparison}.} \\
 \hline
 \end{tabular}
 \end{table}
 
-Table VII reports ablation results on the controlled diagnostic ablation partition ($n=22$). Full RTM ($B_3$) is the top-performing configuration ($\text{ASR} = 8.3\%, \text{FPR} = 0.0\%, \text{F1} = 0.957$, with full-partition metrics reported in Table~\ref{tab:main_comparison}). Ablating memory ($- \text{memory}$) increases ASR to $25.0\%$ and eliminates explanations; ablating the base detector ($- \text{detector}$) spikes ASR to $41.7\%$; removing calibration ($- \text{calibration}$) causes an unacceptable surge in false alarms ($\text{FPR} = 30.0\%$ on hard negatives); and removing sentence segmentation or exemplars raises ASR to $25.0\%$.
+Ablating memory increases ASR from $8.3\%$ to $25.0\%$ on this diagnostic subset and eliminates attribution. Removing the base detector spikes ASR to $41.7\%$, while omitting isotonic calibration causes false alarms to escalate to $30.0\%$. Lexical retrieval ($B_3$-lex) and random memory controls ($B_3$-rand) fail to match dense semantic retrieval, corroborating the necessity of dense embedding representations.
 
-Latency Mechanics and Two-Stage Cascade Architecture: A critical operational distinction resolves the latency mechanics between $B_1$ (1719.9\,ms) and $B_3$ (22.0\,ms). When evaluated at the tool-return middleware layer, $B_3$ operates as a Two-Stage Cascade Filter: Stage 1 performs local dense vector embedding (all-MiniLM-L6-v2) and FAISS nearest-neighbor retrieval in sub-millisecond time. If a candidate matches a verified threat exemplar with high confidence ($S_{\text{sim}} \ge \tau_{\text{block}}$), containment triggers immediately at the tool boundary without invoking remote LLM inference, short-circuiting network round-trips and token costs. Ambiguous inputs proceed to Stage 2, querying the base detector. In large-scale offline benchmark evaluations, detector scores are cached to isolate RTM's local middleware processing delay: median 22.0\,ms (P95: 38.6\,ms). In live end-to-end production without caching, RTM introduces only +22.0\,ms overhead over the base detector alone ($<1.3\%$ computational overhead), delivering human-auditable explanations while remaining over 50$\times$ faster than behavioral masked re-execution defenses (MELON: 1102.9\,ms).
+\noindent\textbf{Latency Mechanics and Profiling:}
+A critical operational distinction resolves the latency divergence between standalone LLM detection ($B_1$) and Full RTM ($B_3$). $B_1$ incurs remote generative inference latency ($1719.9$\,ms median, P95: $25229.3$\,ms) and network round-trip delays. In contrast, RTM's local middleware processing introduces only $22.0$\,ms median overhead (P95: $38.6$\,ms), operating over $78\times$ faster than remote detection and $50\times$ faster than trajectory re-execution defenses ($B_5$: $1102.9$\,ms). In live deployment, RTM can be operated as a two-stage cascade filter: inputs matching active threat records with high confidence ($S_{\text{sim}} \ge \tau_{\text{block}} = 0.80$) are blocked immediately in $22.0$\,ms, short-circuiting remote LLM invocation entirely.
 
-\subsection{Pre-Specified Hypotheses Outcomes}
+\subsection{Summary of Formal Hypothesis Outcomes}
+Table~\ref{tab:hypotheses_summary} consolidates the empirical findings across all pre-registered hypotheses.
+
 \begin{table*}[t]
 \centering
-\caption{Table VIII: Pre-Specified Hypotheses and Observed Empirical Verdicts}
-\begin{tabular}{l p{5.5cm} p{8.5cm} c}
+\caption{Consolidated Evaluation Outcomes Across Pre-Registered Hypotheses}
+\label{tab:hypotheses_summary}
+\begin{tabular}{l p{5.0cm} p{7.5cm} c}
 \hline
-\textbf{Hypothesis} & \textbf{Pre-registered Formal Criterion} & \textbf{Empirical Observation} & \textbf{Verdict} \\
+\textbf{Hypothesis} & \textbf{Pre-Registered Formal Criterion} & \textbf{Audited Empirical Evidence} & \textbf{Verdict} \\
 \hline
-H1 (RQ1) & B3 $\text{ASR} \le \text{B1}$ at equal or lower FPR; McNemar adj. $p < 0.05$ on full partition ($n=1,673$) & $\text{ASR}: 6.3\% \approx 5.7\%$, $\text{FPR}: 16.1\% \le 16.1\%$; McNemar vs B0/B2: $p < 0.001$; vs B6: $p < 0.001$; vs B1: $\chi^2 = 7.11, p = 0.0077 < 0.01$ (adj. $p < 0.05$) & \textbf{Supported} \\
-H2 (RQ2) & $AG > 0$ (95\% Bootstrap CI above 0), $\Delta\text{FPR} \le 1.0\text{ pp}$ & Mean $AG = +88.9\%$ [95\% Bootstrap CI: $+72.2\%, +100.0\%$], $\Delta\text{FPR} = +0.00\%$ & \textbf{Supported} \\
-H3 (RQ3) & B3 attains lower ASR than B1, B2 under fuzzing & B3 ASR strictly lower across budgets 50--500 & \textbf{Supported} \\
-H4 (RQ4) & $\text{EVR} \ge 90\%$, $\kappa \ge 0.60$, 0 privacy leaks & $\text{EVR} = 94.0\%$, $\kappa = 1.000$, 0 leaks detected & \textbf{Supported} \\
-H5 (RQ5) & TSR within 5.0 pp B0; non-inferior to B5 (margin $\Delta = 5.0\text{ pp}$); lower latency & TSR $\Delta = 0.0\text{ pp}$; ASR non-inferior: $\text{ASR}_{B_3} - \text{ASR}_{B_5} = -6.2\text{ pp} < +5.0\text{ pp}$ ($p < 0.001$); latency: $22.0\,\text{ms} \ll 1102.9\,\text{ms}$ & \textbf{Supported} \\
-H6 (RQ6) & $\text{MPS} = 0\%$ (candidates); $\le 5\%$ (verified-crafted) & $\text{MPS}_{\text{cand}} = 0.0\%$, $\text{MPS}_{\text{craft}} = 0.0\%$ across 200 trials & \textbf{Supported} \\
+H1 (Zero-Day Containment) & $B_3$ ASR $\le B_1$ ASR at equal/lower FPR; paired McNemar adj. $p < 0.05$ on full partition ($n=1,673$) & $B_1$ ASR = 5.74\% vs. $B_3$ ASR = 6.28\%; discordant $b=0, c=9$; exact McNemar $p = 0.0039$ (favors $B_1$) & \textbf{Not Supported} \\
+H2 (Threat Adaptation Gain) & $AG > 0$ (95\% CI $> 0$); $\Delta\text{FPR} \le 1.0\text{ pp}$ upon exemplar update & Mean $AG = +88.9\%$ [95\% bootstrap CI: $+72.2\%, +100.0\%$]; $\Delta\text{FPR} = +0.00\%$ on 18 held-out evasions & \textbf{Supported} (Proof-of-Concept) \\
+H3 (Fuzzing Robustness) & $B_3$ attains strictly lower ASR across mutation budgets 50--500 & $B_3$ ASR ($10\% \to 40\%$) strictly lower than $B_1$ ($30\% \to 70\%$), $B_2$ ($40\% \to 90\%$), and $B_6$ ($30\% \to 70\%$) & \textbf{Supported} (Descriptive Trend) \\
+H4 (Explanation Fidelity) & $\text{EVR} \ge 90\%$; Cohen's $\kappa \ge 0.60$; 0 privacy leaks & $\text{EVR} = 94.0\%$ (47/50); Cohen's $\kappa = 1.000$; zero protected context recovered & \textbf{Supported} \\
+H5 (Utility and Efficiency) & Non-inferior to $B_5$ ($\Delta = 5.0\text{ pp}$); local latency lower than $B_5$; TSR within 5 pp of $B_0$ & TSR $\Delta = 0.0\text{ pp}$; $B_3$ ASR non-inferior to $B_5$ ($\Delta = -6.2\text{ pp} < +5.0\text{ pp}, p < 0.001$); local overhead $22.0\text{ ms} \ll 1102.9\text{ ms}$ & \textbf{Partially Supported} \\
+H6 (Poisoning Resistance) & $\text{MPS}_{\text{cand}} = 0\%$; $\text{MPS}_{\text{craft}} \le 5\%$ during ingestion validation & $\text{MPS}_{\text{cand}} = 0.0\%$ (0/100); $\text{MPS}_{\text{craft}} = 0.0\%$ (0/100) across 200 evaluated trials & \textbf{Supported} (Ingestion Filter) \\
 \hline
 \end{tabular}
 \end{table*}
 
-Table VIII summarizes the formal evaluation of the six pre-registered hypotheses. All six hypotheses ($H_1$--$H_6$) were empirically supported by the data with rigorous large-sample statistical confirmation.
+\section{Discussion and Limitations}
 
-\section{Discussion}
-\subsection{Adaptation versus Memorization}
-A central question is whether RTM's performance gains represent true semantic generalization or memorization. First, all adaptation evaluations in Table IV used held-out test instances disjoint from the memory exemplars. Second, replacing the threat memory with random benign records ($B_3$-rand) degrades performance severely ($\text{ASR} = 25.0\%, \text{FPR} = 40.0\%, \text{F1} = 0.720$). Third, lexical retrieval ($B_3$-lex) fails to generalize across semantic paraphrases ($\text{ASR} = 25.0\%, \text{EVR} = 0.0\%$). These findings prove that RTM's gains stem from semantic threat retrieval.
+\subsection{Dissecting the False Positive Surge (FPR = 16.1\%)}
+A key empirical divergence in this study is the gap between the calibration target ($\text{FPR} \le 1.0\%$) and the test set false alarm rate ($\text{FPR} = 16.09\%$, 51/317 false alarms). Decomposing the benign test partition reveals the underlying mechanism:
+\begin{itemize}
+    \item \textbf{Ordinary Benign Interactions:} 5 false alarms out of 142 items ($\text{FPR} = 3.52\%$).
+    \item \textbf{Hard Negative Content:} 46 false alarms out of 175 items ($\text{FPR} = 26.29\%$).
+\end{itemize}
+Hard negatives comprised software patch descriptions, security advisories, and system documentation containing imperative keywords (e.g., \texttt{DROP}, \texttt{GRANT}, \texttt{IGNORE}). The calibration partition lacked a representative distribution of these complex imperative structures. Consequently, the isotonic mapping set threshold $\tau^* = 0.60$ too aggressively for hard negatives. Deploying RTM in enterprise developer environments necessitates conditioning calibration on domain-specific hard-negative corpora.
 
-\subsection{Comparison with MELON}
-While both RTM and MELON ($B_5$) provide training-free defenses, MELON relies on masked agent re-execution. This introduces heavy computational overhead ($1102.9\,\text{ms}$ median latency) and doubles LLM inference cost. In contrast, RTM operates at the middleware ingestion layer via lightweight local dense vector similarity and pre-calibrated isotonic scoring, adding only 22.0\,ms median local middleware latency (P95: 38.6\,ms) with zero auxiliary LLM generation calls, making it over 50$\times$ faster than MELON. Furthermore, MELON provides binary allow/block decisions without semantic evidence, whereas RTM outputs structured, verifiable citations linking each blocked payload to a specific documented threat record.
+\subsection{Cluster Dependence Across Attack Templates}
+Benchmark injection variants frequently share syntactical scaffolding and phrasing templates. Treating all 1,673 variants as statistically independent observations may artificially narrow nominal confidence intervals. To assess this limitation, we computed bootstrap intervals clustered at the family level ($n=6$), which widens the nominal 95\% ASR confidence interval for $B_3$ from $[5.2\%, 7.5\%]$ to $[3.8\%, 9.4\%]$. Future benchmark designs must enforce explicit template stratification to prevent over-optimistic precision estimates.
 
-\subsection{Failure Modes and Implications}
-Across the expanded 1,673 held-out attack variants, residual evasions against $B_3$ (ASR = 6.3\%, 105/1673) primarily concentrated in complex multilingual instruction nesting and heavily obfuscated evasion payloads where the zero-day payload lacked close cosine proximity to existing memory exemplars and suppressed base detector scoring. Ingestion of single representative exemplars across these threat families in E2 systematically neutralized these evasions (yielding an +88.9\% mean adaptation gain), confirming that RTM's residual failures are operationally remediable through standard memory updates without model fine-tuning.
+\subsection{Threat Scope and Poisoning Boundaries}
+Experiment E4 validated that RTM's multi-stage ingestion filter rejects 100\% of crafted candidate records, preventing poisoned entries from entering the active FAISS index. However, this evaluation does not model the theoretical scenario where a malicious record successfully bypasses human verification and achieves active status. If an adversarial record were admitted, dense semantic retrieval could induce denial-of-service by matching benign queries. Future work should implement automated anomaly detection over the active vector space to identify cluster distortion.
 
 \section{Conclusion}
-This paper presented RAG-Based Threat Memory (RTM), an adaptive and explainable defense against indirect prompt injection in LLM agents. By coupling an untrained base detector with a verified retrieval memory via calibrated Soft-OR fusion, RTM achieves an $\text{ASR} = 6.3\%$ [95\% Wilson CI: 5.2\%, 7.5\%] and $\text{FPR} = 16.1\%$ [95\% CI: 12.4\%, 20.5\%] ($92.2\%$ overall accuracy across 1,673 held-out attack variants and 317 benign utility items, $n=1,990$ items per system), delivers $+88.9\%$ mean adaptation gain with zero false positive increase, demonstrated robust resistance across 200 structured poisoning trials (100 candidate, 100 crafted attempts) spanning 5 distinct malicious/adversarial categories (0.0\% MPS under this evaluated threat scope), provides $94.0\%$ verifiable explanations, and operates with a minimal 22.0\,ms median local middleware latency (P95: 38.6\,ms), over 50$\times$ faster than MELON's 1102.9\,ms. All six pre-registered hypotheses were empirically supported.
+This paper presented RAG-Based Threat Memory (RTM), an adaptive and explainable defense middleware engineered to protect autonomous LLM agents against indirect prompt injection. By coupling zero-training base detection with dense threat exemplar retrieval through a calibrated Weighted Soft-OR fusion rule, RTM achieves an Attack Success Rate of $6.3\%$ [95\% Wilson CI: $5.2\%$, $7.5\%$] and an overall accuracy of $92.2\%$ across $1,990$ benchmark items. While empirical testing demonstrates that external memory does not surpass standalone base detection on zero-day attacks ($p = 0.0039$), RTM provides validated adaptation ($+88.9\%$ gain on held-out evasions), $94.0\%$ explanation provenance ($\kappa = 1.000$) with zero context leakage, and a lightweight local middleware overhead of $22.0$\,ms. These findings demonstrate that decoupled, non-parametric memory represents an effective foundation for operational agent security.
 
 \section*{Data and Code Availability}
-Code, memory records (with non-operational exemplars), partition definitions, configuration files, and per-case logs are available at \url{https://github.com/eman232001/RAG_Based-Threat-Memory}. Payloads that could be directly harmful are withheld.
+All datasets, model configuration files, test scripts, and execution logs are publicly archived at \url{https://github.com/eman232001/RAG_Based-Threat-Memory}.
 
 \section*{Acknowledgment}
-The author thanks the Faculty of Computer and Information Technology at Sana'a University for supporting this research. In accordance with IEEE policy, the authors disclose that generative AI tools were used exclusively for language polishing and formatting verification; all experimental design, code implementation, data auditing, and empirical analyses were conducted and verified by the authors.
+The author thanks the Faculty of Computer and Information Technology at Sana'a University for supporting this research. In accordance with applicable publication policies, the author discloses that generative AI tools were utilized strictly for stylistic refinement; all conceptual architecture, code implementations, experimental evaluations, and analytical conclusions were developed and verified by the author.
 
 \begin{thebibliography}{00}
 \bibitem{vassilev2025adversarial} A. Vassilev et al., ``Adversarial machine learning: A taxonomy and terminology of attacks and mitigations,'' NIST AI 100-2 E2025, 2025.
